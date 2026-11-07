@@ -1,0 +1,194 @@
+{
+  "version": 2,
+  "notes": "DRAFT. Cents are 24-TET approximations. Regional tuning differs (Arab, Turkish, Persian). Every entry needs review by a player/teacher before release.",
+  "conventions": {
+    "degrees": "1-based. Degree 1 is the tonic.",
+    "cents": "Maqam cents are measured from the maqam's tonic. Jins cents are measured from the jins root.",
+    "ajnas": "Each maqam lists {jins, root_degree}. The core library derives absolute cents from the ajnas library. Ajnas may overlap (an upper jins can start on the last note of the lower one).",
+    "changes": "Keys are 1-based degree numbers as strings. Values are cents that replace the ascending value for that degree.",
+    "variants": "An ascending variant applies its 'changes' to the ascending scale. If it has an 'ajnas' list, that list replaces the maqam's ajnas.",
+    "descending": "null means not yet specified: the UI must not show a descending form. Otherwise {changes, ajnas} as for variants.",
+    "octave_repeating": "false means the scale does not repeat at 1200 cents (for example Saba). The ascending list then gives the notes in the first register.",
+    "quarter_tones": "Not stored. Whether a note is off the 12-TET grid depends on the selected tonic, so the core library computes it: (tonic_cents + degree_cents) mod 100 != 0.",
+    "reference_tonic": "The traditional tonic, for display and as an optional transposition. cents_above_c is in 0-1199. The default playing tonic is F, chosen by the user."
+  },
+  "tuning_presets": [
+    {
+      "id": "24-tet",
+      "name": "24-TET (theory approximation)",
+      "description": "Plain quarter-tone grid. Per-degree offsets, as {maqam_id: {degree: cents_offset}}, are added to the values in this file.",
+      "maqam_offsets": {}
+    }
+  ],
+  "note_roles": ["tonic", "ghammaz", "characteristic", "quarter_tone", "passing"],
+  "ajnas": {
+    "rast":     { "name": "Rast",     "name_ar": "راست",   "cents": [0, 200, 350, 500], "review": "needed" },
+    "bayati":   { "name": "Bayati",   "name_ar": "بياتي",  "cents": [0, 150, 300, 500], "review": "needed" },
+    "hijaz":    { "name": "Hijaz",    "name_ar": "حجاز",   "cents": [0, 100, 400, 500], "review": "needed" },
+    "saba":     { "name": "Saba",     "name_ar": "صبا",    "cents": [0, 150, 300, 400], "review": "needed" },
+    "nahawand": { "name": "Nahawand", "name_ar": "نهاوند", "cents": [0, 200, 300, 500], "review": "needed" },
+    "kurd":     { "name": "Kurd",     "name_ar": "كرد",    "cents": [0, 100, 300, 500], "review": "needed" },
+    "sikah":    { "name": "Sikah",    "name_ar": "سيكاه",  "cents": [0, 150, 350],      "review": "needed" },
+    "ajam":     { "name": "Ajam",     "name_ar": "عجم",    "cents": [0, 200, 400, 500], "review": "needed" }
+  },
+  "maqamat": [
+    {
+      "id": "rast",
+      "name": "Rast",
+      "name_ar": "راست",
+      "reference_tonic": { "note": "C", "traditional_name": "Rast", "cents_above_c": 0 },
+      "octave_repeating": true,
+      "ascending": [0, 200, 350, 500, 700, 900, 1050, 1200],
+      "ajnas": [
+        { "jins": "rast", "root_degree": 1 },
+        { "jins": "rast", "root_degree": 5 }
+      ],
+      "descending": {
+        "changes": { "7": 1000 },
+        "ajnas": [
+          { "jins": "rast", "root_degree": 1 },
+          { "jins": "nahawand", "root_degree": 5 }
+        ]
+      },
+      "ghammaz_degree": 5,
+      "characteristic_degrees": [3, 7],
+      "review": "needed"
+    },
+    {
+      "id": "bayati",
+      "name": "Bayati",
+      "name_ar": "بياتي",
+      "reference_tonic": { "note": "D", "traditional_name": "Dukah", "cents_above_c": 200 },
+      "octave_repeating": true,
+      "ascending": [0, 150, 300, 500, 700, 800, 1000, 1200],
+      "ajnas": [
+        { "jins": "bayati", "root_degree": 1 },
+        { "jins": "nahawand", "root_degree": 4 }
+      ],
+      "descending": null,
+      "ghammaz_degree": 4,
+      "characteristic_degrees": [2],
+      "review": "needed"
+    },
+    {
+      "id": "hijaz",
+      "name": "Hijaz",
+      "name_ar": "حجاز",
+      "reference_tonic": { "note": "D", "traditional_name": "Dukah", "cents_above_c": 200 },
+      "octave_repeating": true,
+      "ascending": [0, 100, 400, 500, 700, 800, 1000, 1200],
+      "ajnas": [
+        { "jins": "hijaz", "root_degree": 1 },
+        { "jins": "nahawand", "root_degree": 4 }
+      ],
+      "ascending_variants": [
+        {
+          "id": "rast_upper",
+          "name": "Rast on the ghammaz",
+          "changes": { "6": 850 },
+          "ajnas": [
+            { "jins": "hijaz", "root_degree": 1 },
+            { "jins": "rast", "root_degree": 4 }
+          ]
+        }
+      ],
+      "descending": null,
+      "ghammaz_degree": 4,
+      "characteristic_degrees": [2, 3],
+      "review": "needed"
+    },
+    {
+      "id": "saba",
+      "name": "Saba",
+      "name_ar": "صبا",
+      "reference_tonic": { "note": "D", "traditional_name": "Dukah", "cents_above_c": 200 },
+      "octave_repeating": false,
+      "ascending": [0, 150, 300, 400, 700, 800, 1000, 1100],
+      "ajnas": [
+        { "jins": "saba", "root_degree": 1 },
+        { "jins": "hijaz", "root_degree": 3 }
+      ],
+      "upper_register": "TBD - needs reviewer (notes above degree 8)",
+      "descending": null,
+      "ghammaz_degree": 3,
+      "characteristic_degrees": [2, 4],
+      "review": "needed"
+    },
+    {
+      "id": "nahawand",
+      "name": "Nahawand",
+      "name_ar": "نهاوند",
+      "reference_tonic": { "note": "C", "traditional_name": "Rast", "cents_above_c": 0 },
+      "octave_repeating": true,
+      "ascending": [0, 200, 300, 500, 700, 800, 1000, 1200],
+      "ajnas": [
+        { "jins": "nahawand", "root_degree": 1 },
+        { "jins": "kurd", "root_degree": 5 }
+      ],
+      "ascending_variants": [
+        {
+          "id": "harmonic",
+          "name": "Hijaz on the ghammaz",
+          "changes": { "7": 1100 },
+          "ajnas": [
+            { "jins": "nahawand", "root_degree": 1 },
+            { "jins": "hijaz", "root_degree": 5 }
+          ]
+        }
+      ],
+      "descending": null,
+      "ghammaz_degree": 5,
+      "characteristic_degrees": [3],
+      "review": "needed"
+    },
+    {
+      "id": "kurd",
+      "name": "Kurd",
+      "name_ar": "كرد",
+      "reference_tonic": { "note": "D", "traditional_name": "Dukah", "cents_above_c": 200 },
+      "octave_repeating": true,
+      "ascending": [0, 100, 300, 500, 700, 800, 1000, 1200],
+      "ajnas": [
+        { "jins": "kurd", "root_degree": 1 },
+        { "jins": "nahawand", "root_degree": 4 }
+      ],
+      "descending": null,
+      "ghammaz_degree": 4,
+      "characteristic_degrees": [2],
+      "review": "needed"
+    },
+    {
+      "id": "sikah",
+      "name": "Sikah",
+      "name_ar": "سيكاه",
+      "reference_tonic": { "note": "E half-flat", "traditional_name": "Sikah", "cents_above_c": 350 },
+      "octave_repeating": true,
+      "ascending": [0, 150, 350, 550, 700, 850, 1050, 1200],
+      "ajnas": [
+        { "jins": "sikah", "root_degree": 1 },
+        { "jins": "rast", "root_degree": 3 }
+      ],
+      "upper_register": "TBD - needs reviewer (jins above degree 6)",
+      "descending": null,
+      "ghammaz_degree": 3,
+      "characteristic_degrees": [1, 3],
+      "review": "needed"
+    },
+    {
+      "id": "ajam",
+      "name": "Ajam",
+      "name_ar": "عجم",
+      "reference_tonic": { "note": "B-flat", "traditional_name": "Ajam", "cents_above_c": 1000 },
+      "octave_repeating": true,
+      "ascending": [0, 200, 400, 500, 700, 900, 1100, 1200],
+      "ajnas": [
+        { "jins": "ajam", "root_degree": 1 },
+        { "jins": "ajam", "root_degree": 5 }
+      ],
+      "descending": null,
+      "ghammaz_degree": 5,
+      "characteristic_degrees": [3],
+      "review": "needed"
+    }
+  ]
+}
