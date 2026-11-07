@@ -5,3 +5,4 @@ scales/
 .cache/
 compile_commands.json
 *.log
+tunings/

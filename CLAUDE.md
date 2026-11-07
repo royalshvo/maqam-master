@@ -16,5 +16,6 @@ Microtonal maqam instrument/teacher. JUCE (C++17+), CMake, VST3/AU + standalone.
 - Test: `ctest --test-dir build`
 - Fast core-only build (no JUCE download): `cmake -B build-core -G Ninja -DMAQAM_BUILD_PLUGIN=OFF && cmake --build build-core && ctest --test-dir build-core`
 - Listen to the tuning: `build/tools/render_scales scales` (add `--reference-tonic` for traditional tonics)
+- Export tuning files for Ableton Live 12 / Scala synths: `build/tools/export_tunings tunings` (`.ascl`, `.scl`, `.kbm`, in 12-key and one-degree-per-key layouts)
 - CMake/Ninja are installed via `pip3 install --user cmake ninja`; add `~/Library/Python/3.9/bin` to PATH.
 - Dependencies (JUCE, Catch2, nlohmann/json) are pinned in the root `CMakeLists.txt` and fetched by CMake.
