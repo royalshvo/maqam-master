@@ -9,6 +9,8 @@ A microtonal maqam instrument and teacher, as a JUCE VST3/AU plugin with a **bui
 4. **Play Mode** – play freely; plugin highlights and snaps to the selected maqam. Qanun-style controls:
    - **Mandal switches** – one lever per note (pitch class), like the mandals on a qanun: flip it during a performance to raise or lower that note in fixed steps (quarter tone for Arabic, comma steps for Turkish, set by the tuning preset). Playable from the UI, MIDI CC or keyswitches. Also used for the ascending/descending change (e.g. Rast's B half-flat ↔ B♭) and for switching to another maqam or jins live.
    - **Bend knob** – pitch bend with a selectable range in cents (e.g. ±50 / ±100 / ±200) and an optional maqam-aware mode that bends to the next maqam degree instead of a fixed interval.
+   - **Octave and transpose** – octave shift and transpose (semitone steps) for the keyboard/Launchpad, separate from the tonic.
+   - **Modulation helper** – shows the ajnas you can move to from the current maqam because they share its notes (e.g. Rast on F → Bayati on G, Sikah on A½♭, Nahawand on C, Ajam on B♭), the way composers like Mohammed Abdel Wahab move between maqamat. One click lights that jins on the strings and keys. The links live in `maqams.json` (draft until reviewed), never in code.
 5. **Maqam Builder** – combine lower and upper ajnas (including overlapping ajnas).
 6. **Built-in sound engine** – simple, good-sounding synth with microtonal tuning, for demos, practice and lessons.
 7. **Learn Mode** – guided lessons per jins (listen, play along, quiz).
@@ -49,6 +51,8 @@ A microtonal maqam instrument and teacher, as a JUCE VST3/AU plugin with a **bui
 - **Live retuning:** mandal switches and the bend knob change pitch while notes play. The built-in synth follows instantly (per-voice frequency). External synths in Live only follow live changes through MTS-ESP; a static `.ascl` can't. So mandals strengthen the case for the MTS-ESP master in Phase 4. The core `TuningTable` must support per-step offsets that change at runtime, without allocating on the audio thread.
 - **Note spelling after transposition:** a naming system with half-flats/half-sharps for any selected tonic, since reference names (e.g. "E half-flat (Sikah)") only hold at the reference tonic.
 - **Reference pitch:** A4 configurable (default 440 Hz).
+- **UI look — qanun-inspired (draft mockup, Nov 2026):** the main view is a qanun body: trapezoid with the slanted peg side on the left, one horizontal string per maqam note (low notes nearest the player), mandal levers beside the pegs, cents on the bridge, and jins brackets beside the strings. Below it, the piano keyboard with jins bars above the keys and the role colours on each key.
+- **Tempo sync:** vibrato rate and glide can follow the host tempo in note values (e.g. 1/8, 1/16), with a free Hz/seconds mode. Sequencing stays in the v1.2 rhythm machine.
 - **Plugin state:** tonic, maqam, variant, tuning preset and synth settings saved in the DAW project.
 
 ## Phases
