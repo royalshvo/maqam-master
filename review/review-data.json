@@ -1,0 +1,1353 @@
+{
+ "a4_hz": 440.0,
+ "maqamat": [
+  {
+   "characteristic": [
+    {
+     "degree": 3,
+     "name": "E½♭"
+    },
+    {
+     "degree": 7,
+     "name": "B½♭"
+    }
+   ],
+   "forms": [
+    {
+     "ajnas": [
+      {
+       "jins": "rast",
+       "name": "Rast",
+       "name_ar": "راست",
+       "root_degree": 1,
+       "root_name": "C"
+      },
+      {
+       "jins": "rast",
+       "name": "Rast",
+       "name_ar": "راست",
+       "root_degree": 5,
+       "root_name": "G"
+      }
+     ],
+     "id": "ascending",
+     "label": "Ascending",
+     "notes": [
+      {
+       "cents": 0.0,
+       "degree": 1,
+       "hz": 261.6255653005986,
+       "name": "C",
+       "name_words": "C",
+       "roles": [
+        "tonic"
+       ]
+      },
+      {
+       "cents": 200.0,
+       "degree": 2,
+       "hz": 293.6647679174076,
+       "name": "D",
+       "name_words": "D",
+       "roles": [
+        "passing"
+       ]
+      },
+      {
+       "cents": 350.0,
+       "degree": 3,
+       "hz": 320.24370022528126,
+       "name": "E½♭",
+       "name_words": "E half-flat",
+       "roles": [
+        "characteristic",
+        "quarter_tone"
+       ]
+      },
+      {
+       "cents": 500.0,
+       "degree": 4,
+       "hz": 349.2282314330039,
+       "name": "F",
+       "name_words": "F",
+       "roles": [
+        "passing"
+       ]
+      },
+      {
+       "cents": 700.0,
+       "degree": 5,
+       "hz": 391.99543598174927,
+       "name": "G",
+       "name_words": "G",
+       "roles": [
+        "ghammaz"
+       ]
+      },
+      {
+       "cents": 900.0,
+       "degree": 6,
+       "hz": 440.0,
+       "name": "A",
+       "name_words": "A",
+       "roles": [
+        "passing"
+       ]
+      },
+      {
+       "cents": 1050.0,
+       "degree": 7,
+       "hz": 479.82340237271336,
+       "name": "B½♭",
+       "name_words": "B half-flat",
+       "roles": [
+        "characteristic",
+        "quarter_tone"
+       ]
+      },
+      {
+       "cents": 1200.0,
+       "degree": 8,
+       "hz": 523.2511306011972,
+       "name": "C",
+       "name_words": "C",
+       "roles": [
+        "tonic"
+       ]
+      }
+     ]
+    },
+    {
+     "ajnas": [
+      {
+       "jins": "rast",
+       "name": "Rast",
+       "name_ar": "راست",
+       "root_degree": 1,
+       "root_name": "C"
+      },
+      {
+       "jins": "nahawand",
+       "name": "Nahawand",
+       "name_ar": "نهاوند",
+       "root_degree": 5,
+       "root_name": "G"
+      }
+     ],
+     "id": "descending",
+     "label": "Descending",
+     "notes": [
+      {
+       "cents": 0.0,
+       "degree": 1,
+       "hz": 261.6255653005986,
+       "name": "C",
+       "name_words": "C",
+       "roles": [
+        "tonic"
+       ]
+      },
+      {
+       "cents": 200.0,
+       "degree": 2,
+       "hz": 293.6647679174076,
+       "name": "D",
+       "name_words": "D",
+       "roles": [
+        "passing"
+       ]
+      },
+      {
+       "cents": 350.0,
+       "degree": 3,
+       "hz": 320.24370022528126,
+       "name": "E½♭",
+       "name_words": "E half-flat",
+       "roles": [
+        "characteristic",
+        "quarter_tone"
+       ]
+      },
+      {
+       "cents": 500.0,
+       "degree": 4,
+       "hz": 349.2282314330039,
+       "name": "F",
+       "name_words": "F",
+       "roles": [
+        "passing"
+       ]
+      },
+      {
+       "cents": 700.0,
+       "degree": 5,
+       "hz": 391.99543598174927,
+       "name": "G",
+       "name_words": "G",
+       "roles": [
+        "ghammaz"
+       ]
+      },
+      {
+       "cents": 900.0,
+       "degree": 6,
+       "hz": 440.0,
+       "name": "A",
+       "name_words": "A",
+       "roles": [
+        "passing"
+       ]
+      },
+      {
+       "cents": 1000.0,
+       "degree": 7,
+       "hz": 466.1637615180899,
+       "name": "B♭",
+       "name_words": "B flat",
+       "roles": [
+        "characteristic"
+       ]
+      },
+      {
+       "cents": 1200.0,
+       "degree": 8,
+       "hz": 523.2511306011972,
+       "name": "C",
+       "name_words": "C",
+       "roles": [
+        "tonic"
+       ]
+      }
+     ]
+    }
+   ],
+   "ghammaz": {
+    "degree": 5,
+    "name": "G"
+   },
+   "has_descending": true,
+   "id": "rast",
+   "name": "Rast",
+   "name_ar": "راست",
+   "octave_repeating": true,
+   "reviewed": false,
+   "tonic": {
+    "hz": 261.6255653005986,
+    "name": "C4",
+    "traditional_name": "Rast"
+   }
+  },
+  {
+   "characteristic": [
+    {
+     "degree": 2,
+     "name": "E½♭"
+    }
+   ],
+   "forms": [
+    {
+     "ajnas": [
+      {
+       "jins": "bayati",
+       "name": "Bayati",
+       "name_ar": "بياتي",
+       "root_degree": 1,
+       "root_name": "D"
+      },
+      {
+       "jins": "nahawand",
+       "name": "Nahawand",
+       "name_ar": "نهاوند",
+       "root_degree": 4,
+       "root_name": "G"
+      }
+     ],
+     "id": "ascending",
+     "label": "Ascending",
+     "notes": [
+      {
+       "cents": 0.0,
+       "degree": 1,
+       "hz": 293.6647679174076,
+       "name": "D",
+       "name_words": "D",
+       "roles": [
+        "tonic"
+       ]
+      },
+      {
+       "cents": 150.0,
+       "degree": 2,
+       "hz": 320.24370022528126,
+       "name": "E½♭",
+       "name_words": "E half-flat",
+       "roles": [
+        "characteristic",
+        "quarter_tone"
+       ]
+      },
+      {
+       "cents": 300.0,
+       "degree": 3,
+       "hz": 349.2282314330039,
+       "name": "F",
+       "name_words": "F",
+       "roles": [
+        "passing"
+       ]
+      },
+      {
+       "cents": 500.0,
+       "degree": 4,
+       "hz": 391.99543598174927,
+       "name": "G",
+       "name_words": "G",
+       "roles": [
+        "ghammaz"
+       ]
+      },
+      {
+       "cents": 700.0,
+       "degree": 5,
+       "hz": 440.0,
+       "name": "A",
+       "name_words": "A",
+       "roles": [
+        "passing"
+       ]
+      },
+      {
+       "cents": 800.0,
+       "degree": 6,
+       "hz": 466.1637615180899,
+       "name": "B♭",
+       "name_words": "B flat",
+       "roles": [
+        "passing"
+       ]
+      },
+      {
+       "cents": 1000.0,
+       "degree": 7,
+       "hz": 523.2511306011972,
+       "name": "C",
+       "name_words": "C",
+       "roles": [
+        "passing"
+       ]
+      },
+      {
+       "cents": 1200.0,
+       "degree": 8,
+       "hz": 587.3295358348151,
+       "name": "D",
+       "name_words": "D",
+       "roles": [
+        "tonic"
+       ]
+      }
+     ]
+    }
+   ],
+   "ghammaz": {
+    "degree": 4,
+    "name": "G"
+   },
+   "has_descending": false,
+   "id": "bayati",
+   "name": "Bayati",
+   "name_ar": "بياتي",
+   "octave_repeating": true,
+   "reviewed": false,
+   "tonic": {
+    "hz": 293.6647679174076,
+    "name": "D4",
+    "traditional_name": "Dukah"
+   }
+  },
+  {
+   "characteristic": [
+    {
+     "degree": 2,
+     "name": "E♭"
+    },
+    {
+     "degree": 3,
+     "name": "F♯"
+    }
+   ],
+   "forms": [
+    {
+     "ajnas": [
+      {
+       "jins": "hijaz",
+       "name": "Hijaz",
+       "name_ar": "حجاز",
+       "root_degree": 1,
+       "root_name": "D"
+      },
+      {
+       "jins": "nahawand",
+       "name": "Nahawand",
+       "name_ar": "نهاوند",
+       "root_degree": 4,
+       "root_name": "G"
+      }
+     ],
+     "id": "ascending",
+     "label": "Ascending",
+     "notes": [
+      {
+       "cents": 0.0,
+       "degree": 1,
+       "hz": 293.6647679174076,
+       "name": "D",
+       "name_words": "D",
+       "roles": [
+        "tonic"
+       ]
+      },
+      {
+       "cents": 100.0,
+       "degree": 2,
+       "hz": 311.1269837220809,
+       "name": "E♭",
+       "name_words": "E flat",
+       "roles": [
+        "characteristic"
+       ]
+      },
+      {
+       "cents": 400.0,
+       "degree": 3,
+       "hz": 369.9944227116344,
+       "name": "F♯",
+       "name_words": "F sharp",
+       "roles": [
+        "characteristic"
+       ]
+      },
+      {
+       "cents": 500.0,
+       "degree": 4,
+       "hz": 391.99543598174927,
+       "name": "G",
+       "name_words": "G",
+       "roles": [
+        "ghammaz"
+       ]
+      },
+      {
+       "cents": 700.0,
+       "degree": 5,
+       "hz": 440.0,
+       "name": "A",
+       "name_words": "A",
+       "roles": [
+        "passing"
+       ]
+      },
+      {
+       "cents": 800.0,
+       "degree": 6,
+       "hz": 466.1637615180899,
+       "name": "B♭",
+       "name_words": "B flat",
+       "roles": [
+        "passing"
+       ]
+      },
+      {
+       "cents": 1000.0,
+       "degree": 7,
+       "hz": 523.2511306011972,
+       "name": "C",
+       "name_words": "C",
+       "roles": [
+        "passing"
+       ]
+      },
+      {
+       "cents": 1200.0,
+       "degree": 8,
+       "hz": 587.3295358348151,
+       "name": "D",
+       "name_words": "D",
+       "roles": [
+        "tonic"
+       ]
+      }
+     ]
+    },
+    {
+     "ajnas": [
+      {
+       "jins": "hijaz",
+       "name": "Hijaz",
+       "name_ar": "حجاز",
+       "root_degree": 1,
+       "root_name": "D"
+      },
+      {
+       "jins": "rast",
+       "name": "Rast",
+       "name_ar": "راست",
+       "root_degree": 4,
+       "root_name": "G"
+      }
+     ],
+     "id": "rast_upper",
+     "label": "Rast on the ghammaz",
+     "notes": [
+      {
+       "cents": 0.0,
+       "degree": 1,
+       "hz": 293.6647679174076,
+       "name": "D",
+       "name_words": "D",
+       "roles": [
+        "tonic"
+       ]
+      },
+      {
+       "cents": 100.0,
+       "degree": 2,
+       "hz": 311.1269837220809,
+       "name": "E♭",
+       "name_words": "E flat",
+       "roles": [
+        "characteristic"
+       ]
+      },
+      {
+       "cents": 400.0,
+       "degree": 3,
+       "hz": 369.9944227116344,
+       "name": "F♯",
+       "name_words": "F sharp",
+       "roles": [
+        "characteristic"
+       ]
+      },
+      {
+       "cents": 500.0,
+       "degree": 4,
+       "hz": 391.99543598174927,
+       "name": "G",
+       "name_words": "G",
+       "roles": [
+        "ghammaz"
+       ]
+      },
+      {
+       "cents": 700.0,
+       "degree": 5,
+       "hz": 440.0,
+       "name": "A",
+       "name_words": "A",
+       "roles": [
+        "passing"
+       ]
+      },
+      {
+       "cents": 850.0,
+       "degree": 6,
+       "hz": 479.82340237271336,
+       "name": "B½♭",
+       "name_words": "B half-flat",
+       "roles": [
+        "quarter_tone"
+       ]
+      },
+      {
+       "cents": 1000.0,
+       "degree": 7,
+       "hz": 523.2511306011972,
+       "name": "C",
+       "name_words": "C",
+       "roles": [
+        "passing"
+       ]
+      },
+      {
+       "cents": 1200.0,
+       "degree": 8,
+       "hz": 587.3295358348151,
+       "name": "D",
+       "name_words": "D",
+       "roles": [
+        "tonic"
+       ]
+      }
+     ]
+    }
+   ],
+   "ghammaz": {
+    "degree": 4,
+    "name": "G"
+   },
+   "has_descending": false,
+   "id": "hijaz",
+   "name": "Hijaz",
+   "name_ar": "حجاز",
+   "octave_repeating": true,
+   "reviewed": false,
+   "tonic": {
+    "hz": 293.6647679174076,
+    "name": "D4",
+    "traditional_name": "Dukah"
+   }
+  },
+  {
+   "characteristic": [
+    {
+     "degree": 2,
+     "name": "E½♭"
+    },
+    {
+     "degree": 4,
+     "name": "G♭"
+    }
+   ],
+   "forms": [
+    {
+     "ajnas": [
+      {
+       "jins": "saba",
+       "name": "Saba",
+       "name_ar": "صبا",
+       "root_degree": 1,
+       "root_name": "D"
+      },
+      {
+       "jins": "hijaz",
+       "name": "Hijaz",
+       "name_ar": "حجاز",
+       "root_degree": 3,
+       "root_name": "F"
+      }
+     ],
+     "id": "ascending",
+     "label": "Ascending",
+     "notes": [
+      {
+       "cents": 0.0,
+       "degree": 1,
+       "hz": 293.6647679174076,
+       "name": "D",
+       "name_words": "D",
+       "roles": [
+        "tonic"
+       ]
+      },
+      {
+       "cents": 150.0,
+       "degree": 2,
+       "hz": 320.24370022528126,
+       "name": "E½♭",
+       "name_words": "E half-flat",
+       "roles": [
+        "characteristic",
+        "quarter_tone"
+       ]
+      },
+      {
+       "cents": 300.0,
+       "degree": 3,
+       "hz": 349.2282314330039,
+       "name": "F",
+       "name_words": "F",
+       "roles": [
+        "ghammaz"
+       ]
+      },
+      {
+       "cents": 400.0,
+       "degree": 4,
+       "hz": 369.9944227116344,
+       "name": "G♭",
+       "name_words": "G flat",
+       "roles": [
+        "characteristic"
+       ]
+      },
+      {
+       "cents": 700.0,
+       "degree": 5,
+       "hz": 440.0,
+       "name": "A",
+       "name_words": "A",
+       "roles": [
+        "passing"
+       ]
+      },
+      {
+       "cents": 800.0,
+       "degree": 6,
+       "hz": 466.1637615180899,
+       "name": "B♭",
+       "name_words": "B flat",
+       "roles": [
+        "passing"
+       ]
+      },
+      {
+       "cents": 1000.0,
+       "degree": 7,
+       "hz": 523.2511306011972,
+       "name": "C",
+       "name_words": "C",
+       "roles": [
+        "passing"
+       ]
+      },
+      {
+       "cents": 1100.0,
+       "degree": 8,
+       "hz": 554.3652619537442,
+       "name": "D♭",
+       "name_words": "D flat",
+       "roles": [
+        "passing"
+       ]
+      }
+     ]
+    }
+   ],
+   "ghammaz": {
+    "degree": 3,
+    "name": "F"
+   },
+   "has_descending": false,
+   "id": "saba",
+   "name": "Saba",
+   "name_ar": "صبا",
+   "octave_repeating": false,
+   "reviewed": false,
+   "tonic": {
+    "hz": 293.6647679174076,
+    "name": "D4",
+    "traditional_name": "Dukah"
+   }
+  },
+  {
+   "characteristic": [
+    {
+     "degree": 3,
+     "name": "E♭"
+    }
+   ],
+   "forms": [
+    {
+     "ajnas": [
+      {
+       "jins": "nahawand",
+       "name": "Nahawand",
+       "name_ar": "نهاوند",
+       "root_degree": 1,
+       "root_name": "C"
+      },
+      {
+       "jins": "kurd",
+       "name": "Kurd",
+       "name_ar": "كرد",
+       "root_degree": 5,
+       "root_name": "G"
+      }
+     ],
+     "id": "ascending",
+     "label": "Ascending",
+     "notes": [
+      {
+       "cents": 0.0,
+       "degree": 1,
+       "hz": 261.6255653005986,
+       "name": "C",
+       "name_words": "C",
+       "roles": [
+        "tonic"
+       ]
+      },
+      {
+       "cents": 200.0,
+       "degree": 2,
+       "hz": 293.6647679174076,
+       "name": "D",
+       "name_words": "D",
+       "roles": [
+        "passing"
+       ]
+      },
+      {
+       "cents": 300.0,
+       "degree": 3,
+       "hz": 311.1269837220809,
+       "name": "E♭",
+       "name_words": "E flat",
+       "roles": [
+        "characteristic"
+       ]
+      },
+      {
+       "cents": 500.0,
+       "degree": 4,
+       "hz": 349.2282314330039,
+       "name": "F",
+       "name_words": "F",
+       "roles": [
+        "passing"
+       ]
+      },
+      {
+       "cents": 700.0,
+       "degree": 5,
+       "hz": 391.99543598174927,
+       "name": "G",
+       "name_words": "G",
+       "roles": [
+        "ghammaz"
+       ]
+      },
+      {
+       "cents": 800.0,
+       "degree": 6,
+       "hz": 415.3046975799451,
+       "name": "A♭",
+       "name_words": "A flat",
+       "roles": [
+        "passing"
+       ]
+      },
+      {
+       "cents": 1000.0,
+       "degree": 7,
+       "hz": 466.1637615180899,
+       "name": "B♭",
+       "name_words": "B flat",
+       "roles": [
+        "passing"
+       ]
+      },
+      {
+       "cents": 1200.0,
+       "degree": 8,
+       "hz": 523.2511306011972,
+       "name": "C",
+       "name_words": "C",
+       "roles": [
+        "tonic"
+       ]
+      }
+     ]
+    },
+    {
+     "ajnas": [
+      {
+       "jins": "nahawand",
+       "name": "Nahawand",
+       "name_ar": "نهاوند",
+       "root_degree": 1,
+       "root_name": "C"
+      },
+      {
+       "jins": "hijaz",
+       "name": "Hijaz",
+       "name_ar": "حجاز",
+       "root_degree": 5,
+       "root_name": "G"
+      }
+     ],
+     "id": "harmonic",
+     "label": "Hijaz on the ghammaz",
+     "notes": [
+      {
+       "cents": 0.0,
+       "degree": 1,
+       "hz": 261.6255653005986,
+       "name": "C",
+       "name_words": "C",
+       "roles": [
+        "tonic"
+       ]
+      },
+      {
+       "cents": 200.0,
+       "degree": 2,
+       "hz": 293.6647679174076,
+       "name": "D",
+       "name_words": "D",
+       "roles": [
+        "passing"
+       ]
+      },
+      {
+       "cents": 300.0,
+       "degree": 3,
+       "hz": 311.1269837220809,
+       "name": "E♭",
+       "name_words": "E flat",
+       "roles": [
+        "characteristic"
+       ]
+      },
+      {
+       "cents": 500.0,
+       "degree": 4,
+       "hz": 349.2282314330039,
+       "name": "F",
+       "name_words": "F",
+       "roles": [
+        "passing"
+       ]
+      },
+      {
+       "cents": 700.0,
+       "degree": 5,
+       "hz": 391.99543598174927,
+       "name": "G",
+       "name_words": "G",
+       "roles": [
+        "ghammaz"
+       ]
+      },
+      {
+       "cents": 800.0,
+       "degree": 6,
+       "hz": 415.3046975799451,
+       "name": "A♭",
+       "name_words": "A flat",
+       "roles": [
+        "passing"
+       ]
+      },
+      {
+       "cents": 1100.0,
+       "degree": 7,
+       "hz": 493.8833012561241,
+       "name": "B",
+       "name_words": "B",
+       "roles": [
+        "passing"
+       ]
+      },
+      {
+       "cents": 1200.0,
+       "degree": 8,
+       "hz": 523.2511306011972,
+       "name": "C",
+       "name_words": "C",
+       "roles": [
+        "tonic"
+       ]
+      }
+     ]
+    }
+   ],
+   "ghammaz": {
+    "degree": 5,
+    "name": "G"
+   },
+   "has_descending": false,
+   "id": "nahawand",
+   "name": "Nahawand",
+   "name_ar": "نهاوند",
+   "octave_repeating": true,
+   "reviewed": false,
+   "tonic": {
+    "hz": 261.6255653005986,
+    "name": "C4",
+    "traditional_name": "Rast"
+   }
+  },
+  {
+   "characteristic": [
+    {
+     "degree": 2,
+     "name": "E♭"
+    }
+   ],
+   "forms": [
+    {
+     "ajnas": [
+      {
+       "jins": "kurd",
+       "name": "Kurd",
+       "name_ar": "كرد",
+       "root_degree": 1,
+       "root_name": "D"
+      },
+      {
+       "jins": "nahawand",
+       "name": "Nahawand",
+       "name_ar": "نهاوند",
+       "root_degree": 4,
+       "root_name": "G"
+      }
+     ],
+     "id": "ascending",
+     "label": "Ascending",
+     "notes": [
+      {
+       "cents": 0.0,
+       "degree": 1,
+       "hz": 293.6647679174076,
+       "name": "D",
+       "name_words": "D",
+       "roles": [
+        "tonic"
+       ]
+      },
+      {
+       "cents": 100.0,
+       "degree": 2,
+       "hz": 311.1269837220809,
+       "name": "E♭",
+       "name_words": "E flat",
+       "roles": [
+        "characteristic"
+       ]
+      },
+      {
+       "cents": 300.0,
+       "degree": 3,
+       "hz": 349.2282314330039,
+       "name": "F",
+       "name_words": "F",
+       "roles": [
+        "passing"
+       ]
+      },
+      {
+       "cents": 500.0,
+       "degree": 4,
+       "hz": 391.99543598174927,
+       "name": "G",
+       "name_words": "G",
+       "roles": [
+        "ghammaz"
+       ]
+      },
+      {
+       "cents": 700.0,
+       "degree": 5,
+       "hz": 440.0,
+       "name": "A",
+       "name_words": "A",
+       "roles": [
+        "passing"
+       ]
+      },
+      {
+       "cents": 800.0,
+       "degree": 6,
+       "hz": 466.1637615180899,
+       "name": "B♭",
+       "name_words": "B flat",
+       "roles": [
+        "passing"
+       ]
+      },
+      {
+       "cents": 1000.0,
+       "degree": 7,
+       "hz": 523.2511306011972,
+       "name": "C",
+       "name_words": "C",
+       "roles": [
+        "passing"
+       ]
+      },
+      {
+       "cents": 1200.0,
+       "degree": 8,
+       "hz": 587.3295358348151,
+       "name": "D",
+       "name_words": "D",
+       "roles": [
+        "tonic"
+       ]
+      }
+     ]
+    }
+   ],
+   "ghammaz": {
+    "degree": 4,
+    "name": "G"
+   },
+   "has_descending": false,
+   "id": "kurd",
+   "name": "Kurd",
+   "name_ar": "كرد",
+   "octave_repeating": true,
+   "reviewed": false,
+   "tonic": {
+    "hz": 293.6647679174076,
+    "name": "D4",
+    "traditional_name": "Dukah"
+   }
+  },
+  {
+   "characteristic": [
+    {
+     "degree": 1,
+     "name": "E½♭"
+    },
+    {
+     "degree": 3,
+     "name": "G"
+    }
+   ],
+   "forms": [
+    {
+     "ajnas": [
+      {
+       "jins": "sikah",
+       "name": "Sikah",
+       "name_ar": "سيكاه",
+       "root_degree": 1,
+       "root_name": "E½♭"
+      },
+      {
+       "jins": "rast",
+       "name": "Rast",
+       "name_ar": "راست",
+       "root_degree": 3,
+       "root_name": "G"
+      }
+     ],
+     "id": "ascending",
+     "label": "Ascending",
+     "notes": [
+      {
+       "cents": 0.0,
+       "degree": 1,
+       "hz": 320.24370022528126,
+       "name": "E½♭",
+       "name_words": "E half-flat",
+       "roles": [
+        "tonic",
+        "characteristic",
+        "quarter_tone"
+       ]
+      },
+      {
+       "cents": 150.0,
+       "degree": 2,
+       "hz": 349.2282314330039,
+       "name": "F",
+       "name_words": "F",
+       "roles": [
+        "passing"
+       ]
+      },
+      {
+       "cents": 350.0,
+       "degree": 3,
+       "hz": 391.99543598174927,
+       "name": "G",
+       "name_words": "G",
+       "roles": [
+        "ghammaz",
+        "characteristic"
+       ]
+      },
+      {
+       "cents": 550.0,
+       "degree": 4,
+       "hz": 440.0,
+       "name": "A",
+       "name_words": "A",
+       "roles": [
+        "passing"
+       ]
+      },
+      {
+       "cents": 700.0,
+       "degree": 5,
+       "hz": 479.82340237271336,
+       "name": "B½♭",
+       "name_words": "B half-flat",
+       "roles": [
+        "quarter_tone"
+       ]
+      },
+      {
+       "cents": 850.0,
+       "degree": 6,
+       "hz": 523.2511306011972,
+       "name": "C",
+       "name_words": "C",
+       "roles": [
+        "passing"
+       ]
+      },
+      {
+       "cents": 1050.0,
+       "degree": 7,
+       "hz": 587.3295358348151,
+       "name": "D",
+       "name_words": "D",
+       "roles": [
+        "passing"
+       ]
+      },
+      {
+       "cents": 1200.0,
+       "degree": 8,
+       "hz": 640.4874004505624,
+       "name": "E½♭",
+       "name_words": "E half-flat",
+       "roles": [
+        "tonic",
+        "quarter_tone"
+       ]
+      }
+     ]
+    }
+   ],
+   "ghammaz": {
+    "degree": 3,
+    "name": "G"
+   },
+   "has_descending": false,
+   "id": "sikah",
+   "name": "Sikah",
+   "name_ar": "سيكاه",
+   "octave_repeating": true,
+   "reviewed": false,
+   "tonic": {
+    "hz": 320.24370022528126,
+    "name": "E½♭4",
+    "traditional_name": "Sikah"
+   }
+  },
+  {
+   "characteristic": [
+    {
+     "degree": 3,
+     "name": "D"
+    }
+   ],
+   "forms": [
+    {
+     "ajnas": [
+      {
+       "jins": "ajam",
+       "name": "Ajam",
+       "name_ar": "عجم",
+       "root_degree": 1,
+       "root_name": "B♭"
+      },
+      {
+       "jins": "ajam",
+       "name": "Ajam",
+       "name_ar": "عجم",
+       "root_degree": 5,
+       "root_name": "F"
+      }
+     ],
+     "id": "ascending",
+     "label": "Ascending",
+     "notes": [
+      {
+       "cents": 0.0,
+       "degree": 1,
+       "hz": 466.1637615180899,
+       "name": "B♭",
+       "name_words": "B flat",
+       "roles": [
+        "tonic"
+       ]
+      },
+      {
+       "cents": 200.0,
+       "degree": 2,
+       "hz": 523.2511306011972,
+       "name": "C",
+       "name_words": "C",
+       "roles": [
+        "passing"
+       ]
+      },
+      {
+       "cents": 400.0,
+       "degree": 3,
+       "hz": 587.3295358348151,
+       "name": "D",
+       "name_words": "D",
+       "roles": [
+        "characteristic"
+       ]
+      },
+      {
+       "cents": 500.0,
+       "degree": 4,
+       "hz": 622.2539674441618,
+       "name": "E♭",
+       "name_words": "E flat",
+       "roles": [
+        "passing"
+       ]
+      },
+      {
+       "cents": 700.0,
+       "degree": 5,
+       "hz": 698.4564628660078,
+       "name": "F",
+       "name_words": "F",
+       "roles": [
+        "ghammaz"
+       ]
+      },
+      {
+       "cents": 900.0,
+       "degree": 6,
+       "hz": 783.9908719634985,
+       "name": "G",
+       "name_words": "G",
+       "roles": [
+        "passing"
+       ]
+      },
+      {
+       "cents": 1100.0,
+       "degree": 7,
+       "hz": 880.0,
+       "name": "A",
+       "name_words": "A",
+       "roles": [
+        "passing"
+       ]
+      },
+      {
+       "cents": 1200.0,
+       "degree": 8,
+       "hz": 932.3275230361799,
+       "name": "B♭",
+       "name_words": "B flat",
+       "roles": [
+        "tonic"
+       ]
+      }
+     ]
+    }
+   ],
+   "ghammaz": {
+    "degree": 5,
+    "name": "F"
+   },
+   "has_descending": false,
+   "id": "ajam",
+   "name": "Ajam",
+   "name_ar": "عجم",
+   "octave_repeating": true,
+   "reviewed": false,
+   "tonic": {
+    "hz": 466.1637615180899,
+    "name": "B♭4",
+    "traditional_name": "Ajam"
+   }
+  }
+ ],
+ "version": 2
+}

@@ -45,7 +45,7 @@ A microtonal maqam instrument and teacher, as a JUCE VST3/AU plugin with a **bui
 - Tuning presets carry per-maqam, per-degree cent offsets (Arab/Turkish variants, reviewer corrections).
 
 ## Key design decisions (settle in Phase 1)
-- **Keyboard mapping — decided: 12-key layout is the default.** Every chromatic key keeps its place; the key nearest each maqam note is retuned to it (a half-flat goes on the upper key, so Rast on F puts A half-flat on the A key). Keys outside the maqam play 12-TET for now. The one-degree-per-key layout stays available as an option. Implemented in `src/core/KeyMapping` and exported to `.ascl`/`.scl`/`.kbm`; the Rast `.ascl` was checked by ear in Ableton Live 12. Still to decide: whether Play Mode mutes, snaps or passes through out-of-maqam keys.
+- **Keyboard mapping — decided: 12-key layout is the default.** Every chromatic key keeps its place; the key nearest each maqam note is retuned to it (a half-flat goes on the upper key, so Rast on F puts A half-flat on the A key). Keys outside the maqam play 12-TET for now. The one-degree-per-key layout stays available as an option. Implemented in `src/core/KeyMapping` and exported to `.ascl`/`.scl`/`.kbm`; the Rast `.ascl` was checked by ear in Ableton Live 12. Out-of-maqam keys: a **Keys** switch in the built-in synth: *All keys* (default, 12-TET outside the maqam), *Mute outside*, or *Snap to maqam* (nearest maqam note; ties go to the lower one). Snap makes a Launchpad in chromatic Note mode play only maqam notes.
 - **Live retuning:** mandal switches and the bend knob change pitch while notes play. The built-in synth follows instantly (per-voice frequency). External synths in Live only follow live changes through MTS-ESP; a static `.ascl` can't. So mandals strengthen the case for the MTS-ESP master in Phase 4. The core `TuningTable` must support per-step offsets that change at runtime, without allocating on the audio thread.
 - **Note spelling after transposition:** a naming system with half-flats/half-sharps for any selected tonic, since reference names (e.g. "E half-flat (Sikah)") only hold at the reference tonic.
 - **Reference pitch:** A4 configurable (default 440 Hz).
@@ -57,7 +57,7 @@ A microtonal maqam instrument and teacher, as a JUCE VST3/AU plugin with a **bui
 |---|---|---|---|
 | 0 | Data | `maqams.json` for 8 maqamat, reviewed by a player/teacher. **Runs in parallel with Phases 1–3**; engineering works on draft data. | ongoing |
 | 1 | Core engine | maqam/jins model, tuning math, note-role lookup, keyboard mapping, note spelling, Builder logic, Scala/`.ascl` export, unit tests | 2–3 wks |
-| 2 | Sound engine | polyphonic microtonal synth, plays any maqam from the core | 2–3 wks |
+| 2 | Sound engine | polyphonic microtonal synth, plays any maqam from the core. **Mostly done:** `src/synth` with three sounds (Pluck = Karplus-Strong, Synth = saw+square → filter, Ney = breathy flute), 16 voices, exact per-key frequency, held notes follow retunes; Keys limit (all/mute/snap); Poly/Mono/Legato with glide that lands exactly on the maqam pitch; vibrato (amount + mod wheel, delayed fade-in, centred so the average pitch stays in tune). Plugin has sound controls, reverb and an illuminated keyboard; checked in Ableton Live 12. Still to do: chorus, sound polish, pitch wheel as the bend knob. | 2–3 wks |
 | 3 | Playable plugin UI | Explorer, Jins Library, illuminated keyboard, Play Mode (mandal switches, bend knob), Builder, state save/restore | 5–7 wks |
 | 4 | Ableton bridge | MIDI out (MPE + plain notes), MIDI clip export, MTS-ESP master; test routing in Live and with the synths you use | 3–4 wks |
 | 5 | Beta + release | signing/notarization and installers (needed for Mac testers), testers, bug fixes, presets, **v1.0** | 4–5 wks |
@@ -68,7 +68,7 @@ A microtonal maqam instrument and teacher, as a JUCE VST3/AU plugin with a **bui
 ## Milestones
 - M1: Hijaz on tonic F: unit tests assert the computed frequencies for every degree; a WAV render is for listening.
 - M2: play the keyboard in the standalone app with live note highlighting.
-- M3: load the VST3 in Ableton and play maqam-accurate quarter tones.
+- M3: load the VST3 in Ableton and play maqam-accurate quarter tones. **Reached** (Live 12 Standard, built-in synth).
 - M4: another synth follows your tuning (Live 12 `.ascl` first, then MPE MIDI out and MTS-ESP). **`.ascl` part reached:** Live's instruments play the exported Rast tuning.
 
 ## Risks

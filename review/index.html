@@ -1,0 +1,793 @@
+<title>Maqam Tuning Review</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Spectral:wght@500;600&display=swap">
+<style>
+/* Layout: one column read like a qanun's courses, one row per note, from the tonic upward; the answer sits on the same row as the sound. */
+:root {
+  --bg: #f1f3f7;
+  --surface: #ffffff;
+  --ink: #1a2133;
+  --muted: #586179;
+  --line: #d8dde7;
+  --accent: #2a4bb5;
+  --accent-soft: #e4e9f8;
+  --brass: #9a6b14;
+  --brass-soft: #f6ecd8;
+  --teal: #17736b;
+  --teal-soft: #dcf0ed;
+  --plum: #7b3a74;
+  --plum-soft: #f3e3f0;
+  --good: #2c7a39;
+  --good-soft: #e0f1e3;
+  --warn: #b0501a;
+  --warn-soft: #f8e5da;
+  --font-display: "Spectral", Georgia, "Times New Roman", serif;
+  --font-arabic: "Amiri", "Geeza Pro", "Noto Naskh Arabic", serif;
+  --font-body: "IBM Plex Sans", -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f131b; --surface: #171c27; --ink: #e6e9f0; --muted: #9aa3b6; --line: #2a3141;
+    --accent: #93a9ff; --accent-soft: #1f2a4d; --brass: #e2b459; --brass-soft: #3a2f17;
+    --teal: #5fc6b9; --teal-soft: #15332f; --plum: #d690ce; --plum-soft: #3a2338;
+    --good: #72c47f; --good-soft: #17331c; --warn: #f0905a; --warn-soft: #3d2416;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f131b; --surface: #171c27; --ink: #e6e9f0; --muted: #9aa3b6; --line: #2a3141;
+  --accent: #93a9ff; --accent-soft: #1f2a4d; --brass: #e2b459; --brass-soft: #3a2f17;
+  --teal: #5fc6b9; --teal-soft: #15332f; --plum: #d690ce; --plum-soft: #3a2338;
+  --good: #72c47f; --good-soft: #17331c; --warn: #f0905a; --warn-soft: #3d2416;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+}
+.page {
+  max-width: 680px;
+  margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+h1, h2, h3 { font-family: var(--font-display); font-weight: 600; margin: 0; text-wrap: balance; line-height: 1.2; }
+h1 { font-size: 1.75rem; }
+h2 { font-size: 1.6rem; }
+h3 { font-size: 1.05rem; font-family: var(--font-body); font-weight: 600; }
+p { margin: 0; }
+.muted { color: var(--muted); }
+.small { font-size: 0.85rem; }
+.ar { font-family: var(--font-arabic); font-weight: 700; }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+button, input, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Header */
+.intro { display: flex; flex-direction: column; gap: 10px; }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.intro p { max-width: 62ch; }
+.who { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+.who label { font-size: 0.85rem; color: var(--muted); }
+.who input {
+  flex: 1 1 200px; min-width: 0;
+  padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface);
+}
+.status { font-size: 0.85rem; color: var(--muted); display: flex; gap: 6px; align-items: center; }
+.status::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+.status[data-state="saved"]::before { background: var(--good); }
+.status[data-state="saving"]::before { background: var(--brass); }
+.status[data-state="local"]::before { background: var(--warn); }
+
+/* Maqam picker */
+.picker-wrap { overflow-x: auto; margin-inline: -4px; padding: 2px 4px 6px; scrollbar-width: thin; }
+.picker { display: flex; gap: 8px; width: max-content; }
+.chip {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 0;
+  padding: 8px 12px 6px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface);
+  min-width: 84px;
+}
+.chip .ar { font-size: 1rem; line-height: 1.2; }
+.chip .latin { font-size: 0.8rem; color: var(--muted); display: flex; gap: 6px; align-items: center; }
+.chip[aria-current="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.chip[aria-current="true"] .latin { color: var(--accent); }
+.count { font-family: var(--font-mono); font-size: 0.72rem; }
+.count.done { color: var(--good); }
+
+/* Maqam panel */
+.panel { display: flex; flex-direction: column; gap: 16px; }
+.title-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; }
+.title-row .ar { font-size: 1.9rem; line-height: 1; }
+.facts { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 0.9rem; color: var(--muted); }
+.facts strong { color: var(--ink); font-weight: 600; }
+.badge {
+  display: inline-block; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+  padding: 2px 8px; border-radius: 999px; background: var(--warn-soft); color: var(--warn);
+}
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.tab {
+  padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line); background: transparent; font-size: 0.9rem;
+}
+.tab[aria-selected="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+.transport { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 9px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); font-weight: 500;
+}
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+.btn[aria-pressed="true"] { background: var(--brass-soft); border-color: var(--brass); color: var(--brass); }
+.btn svg { width: 14px; height: 14px; fill: currentColor; flex: none; }
+
+/* Note rows */
+.notes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; border-top: 1px solid var(--line); }
+.note { border-bottom: 1px solid var(--line); padding-block: 12px; display: flex; flex-direction: column; gap: 10px; }
+.note.playing { background: linear-gradient(90deg, var(--accent-soft), transparent 70%); }
+.note-head { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; }
+.play {
+  width: 64px; height: 52px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--surface);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; line-height: 1.1;
+}
+.play .nm { font-family: var(--font-display); font-size: 1.25rem; font-weight: 600; }
+.play .deg { font-size: 0.68rem; color: var(--muted); letter-spacing: 0.04em; }
+.play.tonic { border-color: var(--brass); background: var(--brass-soft); }
+.note-info { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.roles { display: flex; flex-wrap: wrap; gap: 4px; }
+.role { font-size: 0.72rem; font-weight: 600; padding: 1px 7px; border-radius: 999px; }
+.role.tonic { background: var(--brass-soft); color: var(--brass); }
+.role.ghammaz { background: var(--plum-soft); color: var(--plum); }
+.role.characteristic { background: var(--accent-soft); color: var(--accent); }
+.role.quarter_tone { background: var(--teal-soft); color: var(--teal); }
+.cents { font-size: 0.8rem; color: var(--muted); }
+.grid-meter { width: 56px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.grid-meter .track { position: relative; width: 56px; height: 10px; }
+.grid-meter .track::before { content: ""; position: absolute; left: 0; right: 0; top: 4px; height: 2px; background: var(--line); border-radius: 1px; }
+.grid-meter .track::after { content: ""; position: absolute; left: 27px; top: 0; width: 2px; height: 10px; background: var(--muted); }
+.grid-meter .dot { position: absolute; top: 1px; width: 8px; height: 8px; border-radius: 50%; background: var(--teal); transform: translateX(-4px); }
+.grid-meter .lbl { font-size: 0.68rem; color: var(--muted); }
+
+.verdicts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.v {
+  padding: 7px 4px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface);
+  font-size: 0.82rem; font-weight: 500; text-align: center;
+}
+.v[aria-pressed="true"][data-v="ok"], .v[aria-pressed="true"][data-v="yes"] { background: var(--good-soft); border-color: var(--good); color: var(--good); }
+.v[aria-pressed="true"][data-v="high"], .v[aria-pressed="true"][data-v="low"], .v[aria-pressed="true"][data-v="no"] { background: var(--warn-soft); border-color: var(--warn); color: var(--warn); }
+.v[aria-pressed="true"][data-v="unsure"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.comment {
+  width: 100%; min-width: 0; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--surface); font-size: 0.9rem;
+}
+textarea.comment { resize: vertical; min-height: 72px; }
+
+/* Structure questions */
+.section { display: flex; flex-direction: column; gap: 12px; }
+.q { display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.q .verdicts { grid-template-columns: repeat(3, 1fr); }
+.q p { font-size: 0.95rem; }
+.q .ar { font-size: 1.05rem; }
+
+.footer { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--line); padding-top: 16px; }
+.footer .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.copy-out { width: 100%; min-height: 140px; font-family: var(--font-mono); font-size: 0.78rem; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 0.8rem; color: var(--muted); }
+.legend span { display: inline-flex; gap: 6px; align-items: center; }
+.error { padding: 12px; border-radius: var(--radius); background: var(--warn-soft); color: var(--warn); }
+
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition: none !important; } }
+</style>
+
+<div class="page">
+  <header class="intro">
+    <span class="eyebrow">Maqam Master · tuning check</span>
+    <h1>Maqam Tuning Review</h1>
+    <p>These eight maqamat are drafts in quarter tones (24-tone equal temperament). Please listen to each note and say whether it is in tune for the maqam. Tap a note to hear it. Turn on the drone to hear every note against the tonic.</p>
+    <p class="muted small">Cents are measured from the tonic: 100 cents is a semitone, 50 is a quarter tone. Each maqam is played on its traditional tonic.</p>
+    <div class="who">
+      <label for="reviewer-name">Your name</label>
+      <input id="reviewer-name" type="text" autocomplete="name" placeholder="So we can credit you">
+    </div>
+    <div class="status" id="status" data-state="idle" role="status">Loading…</div>
+  </header>
+
+  <nav class="picker-wrap" aria-label="Maqamat">
+    <div class="picker" id="picker"></div>
+  </nav>
+
+  <main class="panel" id="panel">
+    <p class="muted">Loading the maqamat…</p>
+  </main>
+
+  <footer class="footer">
+    <div class="legend">
+      <span><span class="role tonic">tonic</span> home note</span>
+      <span><span class="role ghammaz">ghammaz</span> second centre</span>
+      <span><span class="role characteristic">characteristic</span> defines the colour</span>
+      <span><span class="role quarter_tone">quarter tone</span> off the piano grid</span>
+    </div>
+    <div class="row">
+      <button class="btn" id="copy-btn" type="button">Copy all answers</button>
+      <span class="muted small" id="copy-note">To send by WhatsApp or email.</span>
+    </div>
+    <textarea class="comment copy-out" id="copy-out" readonly hidden aria-label="All answers as text"></textarea>
+  </footer>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  const VERDICTS = [["ok", "Correct"], ["high", "Too high"], ["low", "Too low"], ["unsure", "Not sure"]];
+  const YESNO = [["yes", "Yes"], ["no", "No"], ["unsure", "Not sure"]];
+  const VERDICT_TEXT = { ok: "correct", high: "too high", low: "too low", unsure: "not sure", yes: "yes", no: "no" };
+  const ROLE_TEXT = { tonic: "tonic", ghammaz: "ghammaz", characteristic: "characteristic", quarter_tone: "quarter tone" };
+  const LOCAL_KEY = "maqam-review-v1";
+
+  const els = {
+    picker: document.getElementById("picker"),
+    panel: document.getElementById("panel"),
+    status: document.getElementById("status"),
+    name: document.getElementById("reviewer-name"),
+    copyBtn: document.getElementById("copy-btn"),
+    copyOut: document.getElementById("copy-out"),
+    copyNote: document.getElementById("copy-note"),
+  };
+
+  let data = null;          // review-data.json
+  let current = null;       // current maqam id
+  let formIndex = 0;
+  let answers = {};         // maqamId -> { notes:{}, structure:{}, overall:"" }
+  let reviewerName = "";
+  let db = null, uid = null, canSave = false;
+  const dirty = new Set();
+  const writing = new Map();  // maqamId -> promise chain
+
+  // ---------- helpers ----------
+  const h = (tag, attrs = {}, ...kids) => {
+    const el = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (v === false || v == null) continue;
+      if (k === "class") el.className = v;
+      else if (k === "text") el.textContent = v;
+      else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+      else el.setAttribute(k, v === true ? "" : v);
+    }
+    for (const kid of kids.flat()) if (kid != null) el.append(kid);
+    return el;
+  };
+  const ans = (id) => (answers[id] ||= { notes: {}, structure: {}, overall: "" });
+  const maqamById = (id) => data.maqamat.find((m) => m.id === id);
+  const hasContent = (a) => !!a && (Object.keys(a.notes || {}).length > 0 ||
+    Object.keys(a.structure || {}).length > 0 || !!(a.overall || "").trim());
+
+  function setStatus(state, text) {
+    els.status.dataset.state = state;
+    els.status.textContent = text;
+  }
+
+  function loadLocal() {
+    try {
+      const raw = localStorage.getItem(LOCAL_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      answers = saved.answers || {};
+      reviewerName = saved.reviewerName || "";
+    } catch (e) { /* storage unavailable */ }
+  }
+  function saveLocal() {
+    try { localStorage.setItem(LOCAL_KEY, JSON.stringify({ answers, reviewerName })); } catch (e) { /* ignore */ }
+  }
+
+  // ---------- audio ----------
+  let ctx = null, wave = null, master = null, drone = null;
+  let droneOn = false;
+  let seqTimers = [];
+
+  // iPhones mute Web Audio when the ring/silent switch is on. Asking for the "playback" audio
+  // session (iOS 17+) or keeping a silent <audio> element playing makes it behave like music.
+  let keepAlive = null;
+  function silentWavUrl() {
+    const n = 4410, buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf);
+    const s = (o, t) => { for (let i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); };
+    s(0, "RIFF"); v.setUint32(4, 36 + n * 2, true); s(8, "WAVEfmt ");
+    v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, 44100, true); v.setUint32(28, 88200, true); v.setUint16(32, 2, true);
+    v.setUint16(34, 16, true); s(36, "data"); v.setUint32(40, n * 2, true);
+    return URL.createObjectURL(new Blob([buf], { type: "audio/wav" }));
+  }
+  function unlockPhoneAudio() {
+    try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch (e) { /* ignore */ }
+    if (keepAlive) return;
+    try {
+      keepAlive = new Audio(silentWavUrl());
+      keepAlive.loop = true;
+      keepAlive.setAttribute("playsinline", "");
+      const p = keepAlive.play();
+      if (p && p.catch) p.catch(() => { keepAlive = null; });
+    } catch (e) { keepAlive = null; }
+  }
+
+  // Runs fn once the audio engine is really running (the first tap on a phone starts it).
+  function withAudio(fn) {
+    const c = audio();
+    if (c.state === "running") fn(c);
+    else c.resume().then(() => fn(c), () => fn(c));
+  }
+
+  function audio() {
+    unlockPhoneAudio();
+    if (!ctx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      ctx = new AC();
+      master = ctx.createGain();
+      master.gain.value = 0.7;
+      master.connect(ctx.destination);
+      // A plucked-string colour: a strong fundamental and a few soft upper partials.
+      const real = new Float32Array([0, 1, 0.42, 0.24, 0.12, 0.07, 0.035]);
+      wave = ctx.createPeriodicWave(real, new Float32Array(real.length));
+    }
+    if (ctx.state === "suspended") ctx.resume();
+    return ctx;
+  }
+
+  function pluck(hz, when = 0, dur = 1.6) {
+    withAudio((c) => pluckNow(c, hz, when, dur));
+  }
+
+  function pluckNow(c, hz, when, dur) {
+    const t = c.currentTime + 0.03 + when;
+    const osc = c.createOscillator();
+    const g = c.createGain();
+    osc.setPeriodicWave(wave);
+    osc.frequency.value = hz;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.32, t + 0.006);
+    g.gain.exponentialRampToValueAtTime(0.08, t + 0.35);
+    g.gain.exponentialRampToValueAtTime(0.0008, t + dur);
+    osc.connect(g).connect(master);
+    osc.start(t);
+    osc.stop(t + dur + 0.05);
+  }
+
+  function setDrone(on, hz) {
+    withAudio((c) => setDroneNow(c, on, hz));
+  }
+
+  function setDroneNow(c, on, hz) {
+    if (drone) {
+      const old = drone;
+      old.g.gain.cancelScheduledValues(c.currentTime);
+      old.g.gain.setTargetAtTime(0, c.currentTime, 0.08);
+      old.oscs.forEach((o) => o.stop(c.currentTime + 0.5));
+      drone = null;
+    }
+    if (!on) return;
+    const g = c.createGain();
+    g.gain.value = 0;
+    g.gain.setTargetAtTime(0.09, c.currentTime, 0.15);
+    g.connect(master);
+    // Tonic an octave down plus the tonic itself, quietly.
+    const oscs = [hz / 2, hz].map((f, i) => {
+      const o = c.createOscillator();
+      o.type = "sine";
+      o.frequency.value = f;
+      const og = c.createGain();
+      og.gain.value = i === 0 ? 1 : 0.35;
+      o.connect(og).connect(g);
+      o.start();
+      return o;
+    });
+    drone = { g, oscs };
+  }
+
+  function stopSequence() {
+    seqTimers.forEach(clearTimeout);
+    seqTimers = [];
+    document.querySelectorAll(".note.playing").forEach((n) => n.classList.remove("playing"));
+  }
+
+  function playSequence(notes, down) {
+    stopSequence();
+    const order = down ? [...notes].reverse() : notes;
+    const step = 0.62;
+    order.forEach((n, i) => {
+      pluck(n.hz, i * step, 1.4);
+      seqTimers.push(setTimeout(() => highlight(n.degree), i * step * 1000));
+    });
+    seqTimers.push(setTimeout(() => highlight(null), order.length * step * 1000 + 300));
+  }
+
+  function highlight(degree) {
+    document.querySelectorAll(".note").forEach((row) => {
+      row.classList.toggle("playing", degree != null && Number(row.dataset.degree) === degree);
+    });
+  }
+
+  // ---------- persistence ----------
+  function markDirty(id) {
+    saveLocal();
+    if (!canSave) {
+      setStatus("local", "Saved on this device only. Use “Copy all answers” to send them.");
+      return;
+    }
+    dirty.add(id);
+    setStatus("saving", "Saving…");
+    clearTimeout(markDirty.timer);
+    markDirty.timer = setTimeout(flush, 900);
+  }
+
+  function flush() {
+    for (const id of [...dirty]) {
+      dirty.delete(id);
+      const prev = writing.get(id) || Promise.resolve();
+      const next = prev.then(() => writeOne(id));
+      writing.set(id, next);
+    }
+    Promise.allSettled([...writing.values()]).then(() => {
+      if (!dirty.size && canSave) setStatus("saved", "All answers saved.");
+    });
+  }
+
+  async function writeOne(id) {
+    const a = ans(id);
+    const body = {
+      maqam: id,
+      reviewer: uid,
+      reviewerName: reviewerName.slice(0, 120),
+      updatedAt: Date.now(),
+      notes: a.notes,
+      structure: a.structure,
+      overall: a.overall || "",
+    };
+    try {
+      await db.collection("reviews").doc(id + "~" + uid).set(body);
+    } catch (e) {
+      if (e && e.code === "unavailable") {
+        await new Promise((r) => setTimeout(r, 800 + Math.random() * 800));
+        try { await db.collection("reviews").doc(id + "~" + uid).set(body); return; } catch (e2) { e = e2; }
+      }
+      canSave = false;
+      setStatus("local", e && e.code === "invalid_argument"
+        ? "You can view this page but not save here. Your answers stay on this device; use “Copy all answers” to send them."
+        : "Couldn’t save just now. Your answers stay on this device; use “Copy all answers” to send them.");
+    }
+  }
+
+  async function connect() {
+    const claude = window.claude;
+    if (!claude || !claude.use) {
+      setStatus("local", "Saved on this device only. Use “Copy all answers” to send them.");
+      return;
+    }
+    const [dbNs, user] = await Promise.all([claude.use("db"), claude.use("user")]);
+    uid = user ? await user.id() : null;
+    if (!dbNs || !uid) {
+      setStatus("local", "Sign in to claude.ai to save answers here. Until then they stay on this device; “Copy all answers” sends them.");
+      return;
+    }
+    db = dbNs;
+    const may = await user.can("data.write");
+    if (may === false) {
+      setStatus("local", "You can view this page but not save here. Your answers stay on this device; use “Copy all answers” to send them.");
+      return;
+    }
+    canSave = true;
+    setStatus("saving", "Loading your saved answers…");
+
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (!settled) setStatus("local", "Saved answers can’t be reached yet. New answers are kept on this device meanwhile.");
+    }, 10000);
+    try {
+      const snap = await db.collection("reviews").where("reviewer", "==", uid).get();
+      settled = true;
+      clearTimeout(timer);
+      let changed = false;
+      for (const doc of snap.docs) {
+        const body = doc.data();
+        if (!body || !body.maqam) continue;
+        const local = answers[body.maqam];
+        const localCount = local ? Object.keys(local.notes || {}).length + Object.keys(local.structure || {}).length : 0;
+        const remoteCount = Object.keys(body.notes || {}).length + Object.keys(body.structure || {}).length;
+        if (!local || remoteCount >= localCount) {
+          answers[body.maqam] = {
+            notes: { ...(body.notes || {}) },
+            structure: { ...(body.structure || {}) },
+            overall: body.overall || "",
+          };
+          changed = true;
+        } else {
+          dirty.add(body.maqam);  // this device has more; send it up
+        }
+        if (body.reviewerName && !reviewerName) reviewerName = body.reviewerName;
+      }
+      // Anything answered only on this device goes up too.
+      for (const id of Object.keys(answers)) {
+        if (hasContent(answers[id]) && !snap.docs.some((d) => d.data()?.maqam === id)) dirty.add(id);
+      }
+      if (changed) { saveLocal(); render(); }
+      els.name.value = reviewerName;
+      if (dirty.size) { setStatus("saving", "Saving…"); flush(); }
+      else setStatus("saved", snap.empty ? "Ready. Answers save as you go." : "Your saved answers are loaded.");
+    } catch (e) {
+      settled = true;
+      clearTimeout(timer);
+      canSave = false;
+      setStatus("local", "Couldn’t load saved answers. New answers stay on this device; use “Copy all answers” to send them.");
+    }
+  }
+
+  // ---------- rendering ----------
+  function noteCount(m) {
+    let total = 0, done = 0;
+    const a = answers[m.id];
+    m.forms.forEach((f) => f.notes.forEach((n) => {
+      total++;
+      if (a && a.notes[f.id + ":" + n.degree]?.v) done++;
+    }));
+    return { total, done };
+  }
+
+  function renderPicker() {
+    els.picker.replaceChildren(...data.maqamat.map((m) => {
+      const { total, done } = noteCount(m);
+      return h("button", {
+        class: "chip", type: "button", "aria-current": m.id === current ? "true" : "false",
+        onclick: () => select(m.id),
+      },
+        h("span", { class: "ar", lang: "ar", text: m.name_ar }),
+        h("span", { class: "latin" }, m.name, h("span", { class: "count" + (done === total ? " done" : ""), text: done + "/" + total })));
+    }));
+  }
+
+  function verdictButtons(options, value, onPick, label) {
+    return h("div", { class: "verdicts", role: "group", "aria-label": label },
+      options.map(([v, text]) => h("button", {
+        class: "v", type: "button", "data-v": v, "aria-pressed": value === v ? "true" : "false",
+        onclick: () => onPick(value === v ? null : v),
+      }, text)));
+  }
+
+  function gridOffset(hz) {
+    // Distance from the nearest piano key, in cents (-50..+50).
+    const c = 1200 * Math.log2(hz / 440);
+    return c - 100 * Math.round(c / 100);
+  }
+
+  function noteRow(m, form, n) {
+    const key = form.id + ":" + n.degree;
+    const a = ans(m.id);
+    const entry = a.notes[key] || {};
+    const roles = n.roles.filter((r) => r !== "passing");
+    const off = gridOffset(n.hz);
+    const showComment = entry.v && entry.v !== "ok" || entry.c;
+
+    const comment = h("input", {
+      class: "comment", type: "text", id: "c-" + m.id + "-" + key.replace(":", "-"),
+      placeholder: entry.v === "high" || entry.v === "low" ? "About how much? Any detail helps" : "Comment (optional)",
+      value: entry.c || "", hidden: !showComment,
+      "aria-label": "Comment on " + n.name_words,
+      oninput: (e) => { (a.notes[key] ||= {}).c = e.target.value; markDirty(m.id); },
+    });
+
+    const row = h("li", { class: "note", "data-degree": String(n.degree) },
+      h("div", { class: "note-head" },
+        h("button", {
+          class: "play" + (n.roles.includes("tonic") ? " tonic" : ""), type: "button",
+          "aria-label": "Play " + n.name_words + ", degree " + n.degree,
+          onclick: () => { stopSequence(); pluck(n.hz); highlight(n.degree); setTimeout(() => highlight(null), 900); },
+        },
+          h("span", { class: "nm", text: n.name }),
+          h("span", { class: "deg", text: "DEG " + n.degree })),
+        h("div", { class: "note-info" },
+          h("span", { class: "cents mono", text: Math.round(n.cents) + " cents · " + n.hz.toFixed(1) + " Hz" }),
+          roles.length ? h("div", { class: "roles" }, roles.map((r) => h("span", { class: "role " + r, text: ROLE_TEXT[r] || r }))) : null),
+        h("div", { class: "grid-meter", title: "Distance from the nearest piano key" },
+          h("div", { class: "track" }, h("span", { class: "dot", style: "left:" + (28 + off * 0.52).toFixed(1) + "px" })),
+          h("span", { class: "lbl mono", text: (off > 0.5 ? "+" : "") + Math.round(off) + "¢" }))),
+      verdictButtons(VERDICTS, entry.v, (v) => {
+        const e = (a.notes[key] ||= {});
+        if (v) e.v = v; else delete e.v;
+        if (!e.v && !e.c) delete a.notes[key];
+        markDirty(m.id);
+        render();
+        if (v && v !== "ok") document.getElementById(comment.id)?.focus();
+      }, "Is " + n.name_words + " in tune?"),
+      comment,
+    );
+    return row;
+  }
+
+  function question(m, key, textNodes, labelText) {
+    const a = ans(m.id);
+    const entry = a.structure[key] || {};
+    return h("div", { class: "q" },
+      h("p", {}, textNodes),
+      verdictButtons(YESNO, entry.v, (v) => {
+        const e = (a.structure[key] ||= {});
+        if (v) e.v = v; else delete e.v;
+        if (!e.v && !e.c) delete a.structure[key];
+        markDirty(m.id);
+        render();
+      }, labelText),
+      h("input", {
+        class: "comment", type: "text", id: "s-" + m.id + "-" + key.replace(/[^a-z0-9]/gi, "-"),
+        placeholder: entry.v === "no" ? "What should it be?" : "Comment (optional)",
+        value: entry.c || "", "aria-label": "Comment: " + labelText,
+        oninput: (e) => { (a.structure[key] ||= {}).c = e.target.value; markDirty(m.id); },
+      }));
+  }
+
+  function render() {
+    renderPicker();
+    const m = maqamById(current);
+    const form = m.forms[Math.min(formIndex, m.forms.length - 1)];
+    const a = ans(m.id);
+    const ascending = m.forms[0];
+
+    const jinsLine = (f) => f.ajnas.map((j, i) => (i ? " + " : "") + j.name + " on " + j.root_name).join("");
+
+    const panel = [
+      h("div", { class: "title-row" },
+        h("h2", { text: m.name }),
+        h("span", { class: "ar", lang: "ar", text: m.name_ar }),
+        m.reviewed ? null : h("span", { class: "badge", text: "Draft" })),
+      h("div", { class: "facts" },
+        h("span", {}, "Tonic ", h("strong", { text: m.tonic.name }), m.tonic.traditional_name ? " (" + m.tonic.traditional_name + ")" : ""),
+        h("span", {}, "Ghammaz ", h("strong", { text: m.ghammaz.name }), " · degree " + m.ghammaz.degree),
+        h("span", {}, h("strong", { text: jinsLine(ascending) }))),
+    ];
+
+    if (m.forms.length > 1) {
+      panel.push(h("div", { class: "tabs", role: "tablist", "aria-label": "Form" },
+        m.forms.map((f, i) => h("button", {
+          class: "tab", type: "button", role: "tab", "aria-selected": i === formIndex ? "true" : "false",
+          onclick: () => { formIndex = i; stopSequence(); render(); },
+        }, f.label))));
+    }
+    if (!m.has_descending) {
+      panel.push(h("p", { class: "muted small", text: "No separate descending form is written down yet. If this maqam changes on the way down, please say so in the comments at the end." }));
+    }
+    if (!m.octave_repeating) {
+      panel.push(h("p", { class: "muted small", text: "This scale does not repeat at the octave: the eighth note is not the tonic." }));
+    }
+
+    const playIcon = '<svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 1l7 4-7 4z"/></svg>';
+    const upBtn = h("button", { class: "btn primary", type: "button", onclick: () => playSequence(form.notes, false) });
+    upBtn.innerHTML = playIcon + "<span>Play up</span>";
+    const downBtn = h("button", { class: "btn", type: "button", onclick: () => playSequence(form.notes, true) });
+    downBtn.innerHTML = playIcon + "<span>Play down</span>";
+    panel.push(h("div", { class: "transport" },
+      upBtn, downBtn,
+      h("button", {
+        class: "btn", type: "button", "aria-pressed": droneOn ? "true" : "false",
+        onclick: () => { droneOn = !droneOn; setDrone(droneOn, m.tonic.hz); render(); },
+      }, droneOn ? "Drone on " + m.tonic.name : "Drone on tonic"),
+      h("button", { class: "btn", type: "button", onclick: stopSequence }, "Stop"),
+      h("button", { class: "btn", type: "button", onclick: () => pluck(m.tonic.hz, 0, 1.4) }, "Test sound")));
+    panel.push(h("p", { class: "muted small", text: "No sound on iPhone? Turn the volume up and switch off silent mode (the switch or Action button on the side), then tap Test sound." }));
+
+    panel.push(h("ol", { class: "notes", "aria-label": form.label + " notes" }, form.notes.map((n) => noteRow(m, form, n))));
+
+    // Structure
+    const qs = [question(m, "ghammaz", ["Is the ghammaz (second centre) on ", h("strong", { text: m.ghammaz.name }), ", degree " + m.ghammaz.degree + "?"], "Ghammaz on " + m.ghammaz.name)];
+    form.ajnas.forEach((j, i) => {
+      qs.push(question(m, "jins:" + form.id + ":" + i,
+        [i === 0 ? "Lower jins: " : "Upper jins: ", h("strong", { text: j.name }), " ", h("span", { class: "ar", lang: "ar", text: j.name_ar }), " on " + j.root_name + " (degree " + j.root_degree + "). Is this right?"],
+        (i === 0 ? "Lower" : "Upper") + " jins " + j.name + " on " + j.root_name));
+    });
+    if (m.characteristic.length) {
+      qs.push(question(m, "characteristic",
+        ["Are the notes that give " + m.name + " its character ", h("strong", { text: m.characteristic.map((c) => c.name).join(" and ") }), "?"],
+        "Characteristic notes"));
+    }
+    panel.push(h("section", { class: "section" }, h("h3", { text: "Structure" }), qs));
+
+    panel.push(h("section", { class: "section" },
+      h("h3", { text: "Anything else about " + m.name }),
+      h("textarea", {
+        class: "comment", id: "overall-" + m.id, rows: "3",
+        placeholder: "Descending form, Turkish or Arabic intonation, notes to add…",
+        oninput: (e) => { ans(m.id).overall = e.target.value; markDirty(m.id); },
+      }, a.overall || "")));
+
+    // Keep focus and scroll stable across re-render.
+    const focusedId = document.activeElement && document.activeElement.id;
+    els.panel.replaceChildren(...panel);
+    if (focusedId) document.getElementById(focusedId)?.focus();
+  }
+
+  function select(id) {
+    if (!maqamById(id)) return;
+    if (id !== current) { formIndex = 0; stopSequence(); }
+    current = id;
+    if (droneOn) setDrone(true, maqamById(id).tonic.hz);
+    if (location.hash !== "#" + id) history.replaceState(null, "", "#" + id);
+    render();
+    els.picker.querySelector('[aria-current="true"]')?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }
+
+  // ---------- copy ----------
+  function summaryText() {
+    const lines = ["Maqam Master tuning review" + (reviewerName ? " by " + reviewerName : ""), ""];
+    for (const m of data.maqamat) {
+      const a = answers[m.id];
+      if (!a) continue;
+      const out = [];
+      for (const f of m.forms) {
+        for (const n of f.notes) {
+          const e = a.notes[f.id + ":" + n.degree];
+          if (!e || (!e.v && !e.c)) continue;
+          out.push("  " + (m.forms.length > 1 ? f.label + " " : "") + "degree " + n.degree + " " + n.name_words +
+            " (" + Math.round(n.cents) + " cents): " + (VERDICT_TEXT[e.v] || "comment") + (e.c ? " — " + e.c : ""));
+        }
+      }
+      for (const [k, e] of Object.entries(a.structure)) {
+        if (!e.v && !e.c) continue;
+        out.push("  " + k + ": " + (VERDICT_TEXT[e.v] || "comment") + (e.c ? " — " + e.c : ""));
+      }
+      if (a.overall) out.push("  Notes: " + a.overall);
+      if (out.length) lines.push(m.name + " (" + m.tonic.name + ")", ...out, "");
+    }
+    if (lines.length === 2) lines.push("(No answers yet.)");
+    return lines.join("\n");
+  }
+
+  els.copyBtn.addEventListener("click", () => {
+    const text = summaryText();
+    els.copyOut.value = text;
+    const fallback = () => {
+      els.copyOut.hidden = false;
+      els.copyOut.focus();
+      els.copyOut.select();
+      els.copyNote.textContent = "Select the text below and copy it.";
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(() => {
+        els.copyNote.textContent = "Copied. Paste it into WhatsApp or an email.";
+      }, fallback);
+    } else fallback();
+  });
+
+  els.name.addEventListener("input", (e) => {
+    reviewerName = e.target.value;
+    saveLocal();
+    if (canSave) Object.keys(answers).forEach((id) => { if (hasContent(answers[id])) dirty.add(id); });
+    if (canSave && dirty.size) { setStatus("saving", "Saving…"); clearTimeout(markDirty.timer); markDirty.timer = setTimeout(flush, 900); }
+  });
+
+  window.addEventListener("hashchange", () => select(location.hash.slice(1)));
+
+  // ---------- boot ----------
+  loadLocal();
+  els.name.value = reviewerName;
+  fetch("review-data.json")
+    .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then((json) => {
+      data = json;
+      const fromHash = location.hash.slice(1);
+      current = maqamById(fromHash) ? fromHash : data.maqamat[0].id;
+      render();
+      setStatus("idle", "Answers save as you go.");
+      connect();
+    })
+    .catch(() => {
+      els.panel.replaceChildren(h("p", { class: "error", text: "The maqam data didn’t load. Reload the page; if it keeps happening, tell the person who sent you this link." }));
+      setStatus("local", "Not loaded.");
+    });
+})();
+</script>

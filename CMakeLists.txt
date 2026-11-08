@@ -1,15 +1,15 @@
 cmake_minimum_required(VERSION 3.22)
 
+# Must be set before project(), or CMake caches an empty value and no -mmacosx-version-min
+# is passed (JUCE then refuses to build against newer macOS hosts).
+set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum macOS version")
+
 project(MaqamMaster VERSION 0.1.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
-if(APPLE)
-    set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0" CACHE STRING "Minimum macOS version")
-endif()
 
 option(MAQAM_BUILD_PLUGIN "Build the JUCE plugin and standalone app (downloads JUCE)" ON)
 option(MAQAM_BUILD_TESTS  "Build unit tests" ON)
@@ -27,6 +27,7 @@ FetchContent_Declare(nlohmann_json
 FetchContent_MakeAvailable(nlohmann_json)
 
 add_subdirectory(src/core)
+add_subdirectory(src/synth)
 
 if(MAQAM_BUILD_TOOLS)
     add_subdirectory(tools)

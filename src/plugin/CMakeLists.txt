@@ -25,7 +25,7 @@ target_compile_definitions(MaqamMaster PUBLIC
 
 target_link_libraries(MaqamMaster
     PRIVATE
-        maqam_core
+        maqam_synth
         MaqamBinaryData
         juce::juce_audio_utils
     PUBLIC
