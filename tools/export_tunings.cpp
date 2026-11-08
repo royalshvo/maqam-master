@@ -3,9 +3,11 @@
 // Usage: export_tunings [output_dir] [--tonic-midi N] [--reference-tonic] [--a4 HZ] [--data PATH]
 //   Default: tonic F4 (MIDI 65), A4 = 440 Hz, output to ./tunings
 //
-// For each maqam form (ascending, descending if specified, each ascending variant) it writes,
-// in both layouts (12key, degrees):
-//   <name>.ascl   Ableton Live 12 (Tuning in the Live browser, or drag onto a track)
+// For each maqam it writes:
+//   <id>[_variant]_12key   12-key layout; ascending plus the descending notes on free keys
+//   <id>[_form]_degrees    one degree per key; ascending, descending and variants separately
+// each as:
+//   <name>.ascl   Ableton Live 12 (Tuning in the Live browser, or drag onto a track), with note names
 //   <name>.scl + <name>.kbm   Scala, for Surge XT, Pianoteq, MTS-ESP Mini and others
 
 #include <cstdlib>
@@ -16,6 +18,7 @@
 
 #include "core/KeyMapping.h"
 #include "core/MaqamData.h"
+#include "core/NoteNames.h"
 #include "core/Tuning.h"
 
 using namespace maqam;
@@ -77,39 +80,51 @@ int main(int argc, char** argv) {
             const Tonic tonic = useReferenceTonic ? Tonic::fromCentsAboveC(m.referenceTonic.centsAboveC)
                                                   : Tonic{tonicMidi, 0.0};
 
+            const auto down = resolveScale(m, Direction::Descending);
+            const std::string tonicName = spellTonic(tonic).compact(true);
+
+            auto write = [&](const std::string& base, const std::string& label, const TuningTable& table,
+                             const std::vector<std::string>& names, bool approximated) {
+                std::string desc = "Maqam " + m.name + " (" + label + ") on " + tonicName;
+                if (!m.reviewed)
+                    desc += ". DRAFT: not yet reviewed by a player or teacher";
+                if (approximated)
+                    desc += ". Upper register approximated";
+                const std::string name = base + (m.reviewed ? "" : "_DRAFT");
+                const fs::path dir(outDir);
+                const bool ok = writeText(dir / (name + ".ascl"), toAscl(table, desc, "Maqam Master", names)) &&
+                                writeText(dir / (name + ".scl"), toScl(table, desc)) &&
+                                writeText(dir / (name + ".kbm"), toKbm(table));
+                if (!ok)
+                    throw std::runtime_error("cannot write " + name + " in " + outDir);
+                files += 3;
+            };
+
+            // 12-key layout: ascending (or a variant) plus the descending notes on free keys.
+            std::vector<std::pair<std::string, std::string>> variants{{"", "ascending"}};
+            for (const auto& v : m.ascendingVariants)
+                variants.emplace_back(v.id, v.name);
+            for (const auto& [id, label] : variants) {
+                const auto up = resolveScale(m, Direction::Ascending, id);
+                const TuningTable table = makeTwelveKeyTable(m, tonic, a4, id);
+                for (int d : table.unplacedAlternateDegrees)
+                    std::cerr << "warning: " << m.id << " descending degree " << d << " has no free key\n";
+                const std::string fullLabel = std::string(label) + (down ? " + descending" : "") + ", 12-key layout";
+                write(m.id + (id.empty() ? "" : "_" + id) + "_12key", fullLabel, table,
+                      stepNoteNames(table, *up, down ? &*down : nullptr, tonic), false);
+            }
+
+            // One-degree-per-key layout: each form separately.
             struct Form { std::string suffix, label; ResolvedScale scale; };
-            std::vector<Form> forms;
-            forms.push_back({"", "ascending", *resolveScale(m, Direction::Ascending)});
-            if (auto down = resolveScale(m, Direction::Descending))
+            std::vector<Form> forms{{"", "ascending", *resolveScale(m, Direction::Ascending)}};
+            if (down)
                 forms.push_back({"_descending", "descending", *down});
             for (const auto& v : m.ascendingVariants)
                 forms.push_back({"_" + v.id, v.name, *resolveScale(m, Direction::Ascending, v.id)});
-
             for (const auto& f : forms) {
-                for (KeyLayout layout : {KeyLayout::TwelveKey, KeyLayout::Degrees}) {
-                    const bool twelve = layout == KeyLayout::TwelveKey;
-                    const TuningTable table = twelve ? makeTwelveKeyTable(f.scale, tonic, a4)
-                                                     : makeDegreesTable(f.scale, tonic, a4);
-                    const std::string base = m.id + f.suffix + (twelve ? "_12key" : "_degrees") +
-                                             (m.reviewed ? "" : "_DRAFT");
-                    std::string desc = "Maqam " + m.name + " (" + f.label + "), " +
-                                       (twelve ? "12-key layout" : "one degree per key") +
-                                       ", tonic on MIDI " + std::to_string(tonic.midiNote);
-                    if (!m.reviewed)
-                        desc += ". DRAFT: not yet reviewed by a player or teacher";
-                    if (!f.scale.octaveRepeating && !twelve)
-                        desc += ". Upper register approximated";
-
-                    const fs::path dir(outDir);
-                    const bool ok = writeText(dir / (base + ".ascl"), toAscl(table, desc, "Maqam Master")) &&
-                                    writeText(dir / (base + ".scl"), toScl(table, desc)) &&
-                                    writeText(dir / (base + ".kbm"), toKbm(table));
-                    if (!ok) {
-                        std::cerr << "error: cannot write " << base << " in " << outDir << "\n";
-                        return 1;
-                    }
-                    files += 3;
-                }
+                const TuningTable table = makeDegreesTable(f.scale, tonic, a4);
+                write(m.id + f.suffix + "_degrees", f.label + ", one degree per key", table,
+                      stepNoteNames(table, f.scale, nullptr, tonic), !f.scale.octaveRepeating);
             }
         }
         std::cout << "Wrote " << files << " files to " << outDir << "\n";

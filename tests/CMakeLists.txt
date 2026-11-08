@@ -3,6 +3,7 @@ add_executable(maqam_tests
     test_tuning.cpp
     test_render.cpp
     test_keymapping.cpp
+    test_notenames.cpp
 )
 
 target_link_libraries(maqam_tests PRIVATE maqam_core Catch2::Catch2WithMain)

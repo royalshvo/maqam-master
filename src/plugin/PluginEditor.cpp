@@ -2,6 +2,8 @@
 
 #include "PluginProcessor.h"
 
+#include "core/NoteNames.h"
+
 MaqamEditor::MaqamEditor(MaqamProcessor& p) : AudioProcessorEditor(&p), processor_(p) {
     const auto& lib = processor_.library();
     int id = 1;
@@ -41,9 +43,22 @@ void MaqamEditor::showSelectedMaqam() {
     if (m == nullptr)
         return;
 
+    const auto& tonic = processor_.tonic;
+    auto noteList = [&](const maqam::ResolvedScale& s) {
+        juce::String out;
+        for (const auto& n : maqam::spellScale(s, tonic))
+            out << juce::String::fromUTF8(n.compact().c_str()) << "   ";
+        return out;
+    };
+
     const auto scale = maqam::resolveScale(*m, maqam::Direction::Ascending);
     juce::String text;
-    text << "Ascending (cents from tonic): ";
+    text << "Ascending:   " << noteList(*scale);
+    if (const auto down = maqam::resolveScale(*m, maqam::Direction::Descending))
+        text << "\nDescending:  " << noteList(*down);
+    else
+        text << "\nDescending:  not yet specified";
+    text << "\nCents from tonic: ";
     for (double c : scale->cents)
         text << juce::String(c, 0) << "  ";
     text << "\nAjnas: ";
@@ -52,9 +67,8 @@ void MaqamEditor::showSelectedMaqam() {
         text << (def ? juce::String(def->name) : juce::String(j.jinsId)) << " on degree " << j.rootDegree << "   ";
     }
     text << "\nGhammaz: degree " << m->ghammazDegree;
-    text << "\nTonic: MIDI " << processor_.tonic.midiNote << "  ("
-         << juce::String(maqam::frequencyHz(processor_.tonic, 0.0), 2) << " Hz)";
-    text << "\nDescending form: " << (m->descending ? "specified" : "not yet specified");
+    text << "\nTonic: " << juce::String::fromUTF8(maqam::spellTonic(tonic).compact(true).c_str())
+         << "  (MIDI " << tonic.midiNote << ", " << juce::String(maqam::frequencyHz(tonic, 0.0), 2) << " Hz)";
     summary_.setText(text, juce::dontSendNotification);
 
     draftWarning_.setText(m->reviewed ? juce::String()

@@ -25,6 +25,8 @@ struct TuningTable {
     KeyLayout layout = KeyLayout::TwelveKey;
     std::vector<double> stepCents;    // one entry per key in a period; [0] = 0 (the tonic key)
     std::vector<int> degreeOfStep;    // 1-based maqam degree on that step, 0 if outside the maqam
+    std::vector<bool> alternateOfStep; // true when the step holds a descending-form note
+    std::vector<int> unplacedAlternateDegrees; // descending notes that found no free key
     double periodCents = 1200.0;
     int tonicMidiNote = kDefaultTonicMidiNote;
     double tonicHz = 0.0;
@@ -35,6 +37,13 @@ struct TuningTable {
 /** Builds the TwelveKey table. Throws std::runtime_error if two maqam notes need the same key
     and neither neighbouring key is free. */
 TuningTable makeTwelveKeyTable(const ResolvedScale& scale, const Tonic& tonic, double a4Hz = kDefaultA4Hz);
+
+/** Builds the TwelveKey table for a maqam: the ascending form (or an ascending variant), plus
+    the descending form's changed notes on free neighbouring keys, so both are under the hands
+    at once (Rast on F: E key = E half-flat going up, E-flat key = E-flat coming down).
+    Descending notes with no free key are listed in unplacedAlternateDegrees. */
+TuningTable makeTwelveKeyTable(const Maqam& maqam, const Tonic& tonic, double a4Hz = kDefaultA4Hz,
+                               const std::string& variantId = {}, const TuningPreset* preset = nullptr);
 
 /** Builds the Degrees table. For a scale that does not repeat at the octave (Saba), every listed
     degree becomes a step and the period is 1200 cents: an approximation until the upper register
@@ -54,7 +63,14 @@ std::string toScl(const TuningTable& table, const std::string& description);
 std::string toKbm(const TuningTable& table);
 
 /** Ableton Live 12 .ascl text (a .scl with @ABL directives). Pins MIDI 0 as the first note so
-    the tonic lands on its own key. */
-std::string toAscl(const TuningTable& table, const std::string& description, const std::string& source);
+    the tonic lands on its own key. If noteNames is given (one per step, step 0 first) it is
+    written as NOTE_NAMES. */
+std::string toAscl(const TuningTable& table, const std::string& description, const std::string& source,
+                   const std::vector<std::string>& noteNames = {});
+
+/** Compact name of every step in a table (step 0 first): maqam steps use the maqam spelling
+    (descending spelling for alternate steps), other keys their plain 12-TET name. */
+std::vector<std::string> stepNoteNames(const TuningTable& table, const ResolvedScale& primary,
+                                       const ResolvedScale* alternate, const Tonic& tonic);
 
 } // namespace maqam

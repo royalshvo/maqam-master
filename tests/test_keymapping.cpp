@@ -176,3 +176,83 @@ TEST_CASE("every maqam form exports in both layouts") {
         }
     }
 }
+
+TEST_CASE("combined 12-key table: Rast has both E half-flat and E-flat on F") {
+    const Maqam* rast = library().findMaqam("rast");
+    REQUIRE(rast != nullptr);
+    const TuningTable t = makeTwelveKeyTable(*rast, Tonic{});
+
+    // Going up: E key plays E half-flat (degree 7). Coming down: E-flat key plays E-flat.
+    CHECK(keyDegree(t, 76) == 7);
+    CHECK_FALSE(t.alternateOfStep[11]);
+    CHECK(keyFrequencyHz(t, 76) == Approx(midiNoteToHz(75.5)));
+    CHECK(keyDegree(t, 75) == 7);
+    CHECK(t.alternateOfStep[10]);
+    CHECK(keyFrequencyHz(t, 75) == Approx(midiNoteToHz(75)));
+    CHECK(t.unplacedAlternateDegrees.empty());
+
+    // Everything else is unchanged from the plain ascending table.
+    const TuningTable plain = makeTwelveKeyTable(*resolveScale(*rast, Direction::Ascending), Tonic{});
+    for (int k = 0; k < 12; ++k)
+        if (k != 10)
+            CHECK(t.stepCents[static_cast<size_t>(k)] == plain.stepCents[static_cast<size_t>(k)]);
+}
+
+TEST_CASE("combined 12-key table: maqamat without a descending form match ascending") {
+    const Maqam* bayati = library().findMaqam("bayati");
+    REQUIRE(bayati != nullptr);
+    const TuningTable t = makeTwelveKeyTable(*bayati, Tonic{});
+    const TuningTable plain = makeTwelveKeyTable(*resolveScale(*bayati, Direction::Ascending), Tonic{});
+    CHECK(t.stepCents == plain.stepCents);
+    CHECK(t.degreeOfStep == plain.degreeOfStep);
+    for (bool alt : t.alternateOfStep)
+        CHECK_FALSE(alt);
+}
+
+TEST_CASE("combined 12-key table works for every maqam and variant") {
+    for (const auto& m : library().maqamat) {
+        std::vector<std::string> variants{""};
+        for (const auto& v : m.ascendingVariants)
+            variants.push_back(v.id);
+        for (const auto& v : variants) {
+            for (const Tonic& tonic : {Tonic{}, Tonic::fromCentsAboveC(m.referenceTonic.centsAboveC)}) {
+                INFO(m.id << "/" << v << " tonic " << tonic.midiNote);
+                TuningTable t;
+                REQUIRE_NOTHROW(t = makeTwelveKeyTable(m, tonic, kDefaultA4Hz, v));
+                CHECK(t.unplacedAlternateDegrees.empty());
+                CHECK(keyDegree(t, tonic.midiNote) == 1);
+            }
+        }
+    }
+}
+
+TEST_CASE("the tonic stays on its key even when tuned +50 cents") {
+    ResolvedScale s;
+    s.cents = {0, 200, 400, 500, 700, 900, 1100, 1200};
+    const Tonic raised{64, 50.0};
+    const TuningTable t = makeTwelveKeyTable(s, raised);
+    CHECK(keyDegree(t, 64) == 1);
+    CHECK(keyFrequencyHz(t, 64) == Approx(midiNoteToHz(64.5)));
+}
+
+TEST_CASE(".ascl note names for the combined Rast table") {
+    const Maqam* rast = library().findMaqam("rast");
+    REQUIRE(rast != nullptr);
+    const Tonic f4;
+    const TuningTable t = makeTwelveKeyTable(*rast, f4);
+    const auto up = resolveScale(*rast, Direction::Ascending);
+    const auto down = resolveScale(*rast, Direction::Descending);
+    const auto names = stepNoteNames(t, *up, &*down, f4);
+    REQUIRE(names.size() == 12);
+    // F, G-flat (outside), G, A-flat (outside), A half-flat, B-flat, B (outside), C,
+    // D-flat (outside), D, E-flat (descending), E half-flat.
+    const std::string hf = "\xC2\xBD\xE2\x99\xAD";   // ½♭
+    const std::string fl = "\xE2\x99\xAD";           // ♭
+    CHECK(names == std::vector<std::string>{"F", "G" + fl, "G", "A" + fl, "A" + hf, "B" + fl, "B",
+                                            "C", "D" + fl, "D", "E" + fl, "E" + hf});
+
+    const std::string a = toAscl(t, "Rast", "Maqam Master", names);
+    CHECK(contains(a, "! @ABL NOTE_NAMES \"F\" \"G" + fl + "\""));
+    // A wrong count is ignored rather than written.
+    CHECK_FALSE(contains(toAscl(t, "Rast", "Maqam Master", {"F"}), "NOTE_NAMES"));
+}

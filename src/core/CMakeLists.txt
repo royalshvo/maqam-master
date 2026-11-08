@@ -5,6 +5,7 @@ add_library(maqam_core STATIC
     Tuning.cpp
     Render.cpp
     KeyMapping.cpp
+    NoteNames.cpp
 )
 
 target_include_directories(maqam_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)
