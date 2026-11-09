@@ -68,6 +68,7 @@ private:
     juce::ToggleButton droneButton_{"Drone"};
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> droneAttachment_;
     std::vector<std::unique_ptr<Knob>> knobs_;
+    std::vector<std::unique_ptr<Knob>> steppers_;  // Octave, Transpose (- / + buttons)
     juce::Label summary_;
     juce::Label draftWarning_;
     MaqamKeyboard keyboard_;

@@ -23,6 +23,16 @@ int itemForTonic(const maqam::Tonic& t) {
     return ((quarterTones % 24) + 24) % 24;
 }
 
+// What a key of the on-screen keyboard plays: the info of the key it is shifted to by octave and
+// transpose. Keys shifted off the 128 keys play nothing.
+const MaqamProcessor::KeyInfo& infoFor(const MaqamProcessor& processor, int note) {
+    static const MaqamProcessor::KeyInfo nothing{};
+    const int k = note + processor.keyShift();
+    if (k < 0 || k >= maqam::synth::kNumKeys)
+        return nothing;
+    return processor.keyInfo()[static_cast<size_t>(k)];
+}
+
 } // namespace
 
 // ---------------------------------------------------------------- keyboard
@@ -38,14 +48,14 @@ MaqamKeyboard::MaqamKeyboard(MaqamProcessor& processor, juce::MidiKeyboardState&
 }
 
 void MaqamKeyboard::dimIfOutside(int note, juce::Graphics& g, juce::Rectangle<float> area) const {
-    if (juce::roundToInt(limitParam_->load()) == 0 || processor_.keyInfo()[static_cast<size_t>(note)].degree != 0)
+    if (juce::roundToInt(limitParam_->load()) == 0 || infoFor(processor_, note).degree != 0)
         return;
     g.setColour(juce::Colours::black.withAlpha(0.45f));
     g.fillRect(area);
 }
 
 juce::Colour MaqamKeyboard::colourFor(int note) const {
-    const auto& ki = processor_.keyInfo()[static_cast<size_t>(note)];
+    const auto& ki = infoFor(processor_, note);
     if (ki.degree == 0)
         return juce::Colours::transparentBlack;
     if (ki.descending)
@@ -80,11 +90,11 @@ void MaqamKeyboard::drawBlackNote(int note, juce::Graphics& g, juce::Rectangle<f
     g.fillRoundedRectangle(band, 2.0f);
     g.setColour(juce::Colours::black);
     g.setFont(juce::FontOptions(juce::jmin(10.0f, area.getWidth() * 0.75f)).withHorizontalScale(0.75f));
-    g.drawText(processor_.keyInfo()[static_cast<size_t>(note)].name, band, juce::Justification::centredBottom, false);
+    g.drawText(infoFor(processor_, note).name, band, juce::Justification::centredBottom, false);
 }
 
 juce::String MaqamKeyboard::getWhiteNoteText(int note) {
-    const auto& ki = processor_.keyInfo()[static_cast<size_t>(note)];
+    const auto& ki = infoFor(processor_, note);
     return ki.degree != 0 ? ki.name : juce::String();
 }
 
@@ -148,6 +158,20 @@ MaqamEditor::MaqamEditor(MaqamProcessor& p)
         addAndMakeVisible(knob->slider);
         addAndMakeVisible(knob->label);
         knobs_.push_back(std::move(knob));
+    }
+
+    for (const auto& [paramId, name] : {std::pair{"octave", "Octave"}, std::pair{"transpose", "Transpose"}}) {
+        auto st = std::make_unique<Knob>();
+        st->slider.setSliderStyle(juce::Slider::IncDecButtons);
+        st->slider.setTextBoxStyle(juce::Slider::TextBoxLeft, false, 36, 24);
+        st->attachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+            processor_.parameters, paramId, st->slider);
+        st->slider.onValueChange = [this] { keyboard_.repaint(); };  // show what each key now plays
+        st->label.setText(name, juce::dontSendNotification);
+        st->label.setJustificationType(juce::Justification::centredRight);
+        addAndMakeVisible(st->slider);
+        addAndMakeVisible(st->label);
+        steppers_.push_back(std::move(st));
     }
 
     summary_.setJustificationType(juce::Justification::topLeft);
@@ -218,6 +242,8 @@ void MaqamEditor::showSelectedMaqam() {
          << "  (MIDI " << tonic.midiNote << ", " << juce::String(maqam::frequencyHz(tonic, 0.0), 2) << " Hz)";
     text << "\n\nKeyboard: gold = tonic, green = ghammaz, blue = maqam note, purple = descending note."
             "\nOther keys play normal 12-TET, or are muted / snapped by Keys. Mod wheel adds vibrato."
+            "\nOctave / Transpose move which key plays which note (the maqam itself stays put):"
+            "\n  e.g. Transpose +5 puts the tonic F on a C pad of a Launchpad."
             "\nDrone: the tonic and its octave, always in tune; it follows maqam and tonic changes.";
     summary_.setText(text, juce::dontSendNotification);
 
@@ -238,6 +264,11 @@ void MaqamEditor::resized() {
     top.removeFromLeft(12);
     tonicLabel_.setBounds(top.removeFromLeft(50));
     tonicBox_.setBounds(top.removeFromLeft(90));
+    for (auto& st : steppers_) {
+        top.removeFromLeft(8);
+        st->label.setBounds(top.removeFromLeft(st.get() == steppers_.front().get() ? 52 : 70));
+        st->slider.setBounds(top.removeFromLeft(100));
+    }
     area.removeFromTop(8);
 
     auto row = area.removeFromTop(26);

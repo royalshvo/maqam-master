@@ -62,6 +62,8 @@ public:
     };
     /** What each MIDI key plays under the current maqam, for the on-screen keyboard. */
     const std::array<KeyInfo, maqam::synth::kNumKeys>& keyInfo() const { return keyInfo_; }
+    /** Octave and transpose in semitones: key k plays the pitch of key k + keyShift(). */
+    int keyShift() const;
 
     juce::AudioProcessorValueTreeState parameters;
     juce::MidiKeyboardState keyboardState;
@@ -93,6 +95,8 @@ private:
     std::atomic<float>* glideParam_ = nullptr;
     std::atomic<float>* vibratoParam_ = nullptr;
     std::atomic<float>* vibratoRateParam_ = nullptr;
+    std::atomic<float>* octaveParam_ = nullptr;
+    std::atomic<float>* transposeParam_ = nullptr;
     std::atomic<float>* droneOnParam_ = nullptr;
     std::atomic<float>* droneLevelParam_ = nullptr;
     std::atomic<float>* droneOctaveParam_ = nullptr;

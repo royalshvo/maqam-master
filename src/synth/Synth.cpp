@@ -350,7 +350,10 @@ void Synth::setModWheel(float value) {
     modWheel_ = std::clamp(value, 0.0f, 1.0f);
 }
 
-int Synth::soundingKey(int key) const {
+int Synth::soundingKey(int incoming, int shift) const {
+    if (incoming < 0 || incoming >= kNumKeys)
+        return -1;
+    const int key = incoming + shift;
     if (key < 0 || key >= kNumKeys)
         return -1;
     const auto k = static_cast<size_t>(key);
@@ -364,7 +367,7 @@ void Synth::setTuning(const KeyTuning& tuning) {
     for (auto& v : voices_) {
         if (!v.active())
             continue;
-        const int sk = soundingKey(v.key());
+        const int sk = soundingKey(v.key(), v.shift());
         if (sk < 0)
             v.release();
         else
@@ -408,7 +411,9 @@ void Synth::polyNoteOn(int key, float velocity) {
     const int sk = soundingKey(key);
     if (sk < 0)
         return;
-    findVoiceFor(key)->start(key, hzOf(sk), velocity, params_, ++noteCounter_);
+    Voice* v = findVoiceFor(key);
+    v->start(key, hzOf(sk), velocity, params_, ++noteCounter_);
+    v->setShift(keyShift_);
 }
 
 void Synth::removeHeld(int key) {
@@ -431,12 +436,14 @@ void Synth::monoNoteOn(int key, float velocity) {
     const double glide = params_.glideSeconds;
     if (params_.mode == VoiceMode::Legato && overlapping && v.active() && !v.released()) {
         v.setKey(key);
+        v.setShift(keyShift_);
         v.sustained = false;
         v.slideTo(hzOf(sk), glide);  // no re-attack
         return;
     }
     const double previousHz = v.active() ? v.currentHz() : 0.0;
     v.start(key, hzOf(sk), velocity, params_, ++noteCounter_);
+    v.setShift(keyShift_);
     if (params_.mode == VoiceMode::Mono && previousHz > 0.0 && glide > 0.0)
         v.glideFrom(previousHz, glide);
 }
@@ -452,6 +459,7 @@ void Synth::monoNoteOff(int key) {
         const int sk = soundingKey(k);
         if (sk >= 0) {
             v.setKey(k);
+            v.setShift(keyShift_);
             v.slideTo(hzOf(sk), params_.glideSeconds);
             return;
         }

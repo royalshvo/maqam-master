@@ -18,6 +18,9 @@
 //                (overlapping notes slide to the new pitch without re-attacking).
 //   Glide      - slide time in Mono/Legato. The slide is linear in cents and ends exactly on the
 //                target pitch.
+//   Key shift  - octave and transpose: key k plays the pitch of key k + shift, so the maqam
+//                layout can sit anywhere under the hands (e.g. +5 puts F's tonic on a C pad).
+//                The maqam itself does not move. A note keeps the shift it started with.
 //   Vibrato    - sine LFO on pitch, centred on the exact note so the average pitch stays in
 //                tune. It fades in after the note starts, as players do. Depth = the Vibrato
 //                amount plus the mod wheel.
@@ -63,6 +66,9 @@ public:
     /** A tuning change: a very short slide so held notes move without a click. */
     void retune(double hz) { slideTo(hz, 0.015); }
     void setKey(int key) { key_ = key; }
+    /** The key shift in force when this note started (see Synth::setKeyShift). */
+    void setShift(int semitones) { shift_ = semitones; }
+    int shift() const { return shift_; }
     void setVibrato(double depthCents, double rateHz) {
         vibDepthCents_ = depthCents;
         vibRateHz_ = rateHz;
@@ -93,6 +99,7 @@ private:
     bool active_ = false;
     bool released_ = false;
     int key_ = -1;
+    int shift_ = 0;
     uint64_t age_ = 0;
     float velocity_ = 1.0f;
 
@@ -139,6 +146,11 @@ public:
     void setParams(const SynthParams& params);
     const SynthParams& params() const { return params_; }
 
+    /** Octave and transpose, in semitones: key k then plays the pitch of key k + semitones.
+        Applies to notes started after the call; held notes keep their pitch. */
+    void setKeyShift(int semitones) { keyShift_ = semitones; }
+    int keyShift() const { return keyShift_; }
+
     /** Mod wheel, 0..1: adds vibrato depth. */
     void setModWheel(float value);
 
@@ -161,8 +173,10 @@ public:
     /** Pitch of that voice right now, including a glide under way (vibrato excluded). */
     double currentHz(int key) const;
 
-    /** The key whose pitch this key plays under the note limit, or -1 if muted. */
-    int soundingKey(int key) const;
+    /** The key whose pitch this key plays under the key shift and note limit, or -1 if muted
+        (or shifted off the 128 keys). */
+    int soundingKey(int key) const { return soundingKey(key, keyShift_); }
+    int soundingKey(int key, int shift) const;
 
 private:
     Voice* findVoiceFor(int key);
@@ -176,6 +190,7 @@ private:
     double sampleRate_ = 44100.0;
     SynthParams params_;
     float modWheel_ = 0.0f;
+    int keyShift_ = 0;
     KeyTuning defaultTuning_;
     const KeyTuning* tuning_ = nullptr;
     std::array<Voice, kMaxVoices> voices_;

@@ -39,6 +39,9 @@ juce::AudioProcessorValueTreeState::ParameterLayout MaqamProcessor::createLayout
     layout.add(std::make_unique<AudioParameterFloat>(ParameterID{"vibratoRate", 1}, "Vibrato rate",
                                                      NormalisableRange<float>(3.0f, 8.0f), 5.5f,
                                                      AudioParameterFloatAttributes().withLabel("Hz")));
+    layout.add(std::make_unique<AudioParameterInt>(ParameterID{"octave", 1}, "Octave", -2, 2, 0));
+    layout.add(std::make_unique<AudioParameterInt>(ParameterID{"transpose", 1}, "Transpose", -12, 12, 0,
+                                                   AudioParameterIntAttributes().withLabel("st")));
     layout.add(std::make_unique<AudioParameterBool>(ParameterID{"droneOn", 1}, "Drone", false));
     layout.add(std::make_unique<AudioParameterFloat>(ParameterID{"droneLevel", 1}, "Drone level",
                                                      NormalisableRange<float>(0.0f, 1.0f), 0.5f));
@@ -60,6 +63,8 @@ MaqamProcessor::MaqamProcessor()
     glideParam_ = parameters.getRawParameterValue("glide");
     vibratoParam_ = parameters.getRawParameterValue("vibrato");
     vibratoRateParam_ = parameters.getRawParameterValue("vibratoRate");
+    octaveParam_ = parameters.getRawParameterValue("octave");
+    transposeParam_ = parameters.getRawParameterValue("transpose");
     droneOnParam_ = parameters.getRawParameterValue("droneOn");
     droneLevelParam_ = parameters.getRawParameterValue("droneLevel");
     droneOctaveParam_ = parameters.getRawParameterValue("droneOctave");
@@ -120,6 +125,10 @@ void MaqamProcessor::retune() {
     sendChangeMessage();
 }
 
+int MaqamProcessor::keyShift() const {
+    return 12 * juce::roundToInt(octaveParam_->load()) + juce::roundToInt(transposeParam_->load());
+}
+
 void MaqamProcessor::prepareToPlay(double sampleRate, int) {
     synth_.prepare(sampleRate);
     drone_.prepare(sampleRate);
@@ -177,6 +186,7 @@ void MaqamProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBu
     p.vibrato = vibratoParam_->load();
     p.vibratoRateHz = vibratoRateParam_->load();
     synth_.setParams(p);
+    synth_.setKeyShift(keyShift());
 
     DroneParams dp;
     dp.on = droneOnParam_->load() > 0.5f;

@@ -532,3 +532,90 @@ TEST_CASE("The drone is silent when off or without a maqam, and fades in and out
     CHECK(peak(tail) < 1e-4);
     CHECK_FALSE(drone.sounding());
 }
+
+// ---------------------------------------------------------------- octave / transpose
+
+TEST_CASE("Key shift: a key plays the pitch of the shifted key, exactly") {
+    const KeyTuning tuning = makeKeyTuning(rastOnF());
+    Synth synth;
+    synth.prepare(44100.0);
+    synth.setTuning(tuning);
+
+    synth.setKeyShift(5);  // a C pad (60) plays the tonic F (65)
+    synth.noteOn(60, 0.8f);
+    CHECK(synth.playingHz(60) == Approx(tuning.hz[65]).epsilon(1e-12));
+    CHECK(synth.soundingKey(64) == 69);  // the E pad plays A half-flat
+    CHECK(synth.soundingKey(64) == 64 + 5);
+
+    synth.setKeyShift(-12);  // one octave down
+    synth.noteOn(77, 0.8f);
+    CHECK(synth.playingHz(77) == Approx(tuning.hz[65]).epsilon(1e-12));
+    CHECK(synth.playingHz(77) == Approx(tuning.hz[77] / 2.0).epsilon(1e-12));
+
+    synth.setKeyShift(24);  // shifted past the top key: silent
+    CHECK(synth.soundingKey(120) == -1);
+    synth.killAll();
+    synth.noteOn(120, 0.8f);
+    CHECK(synth.activeVoiceCount() == 0);
+}
+
+TEST_CASE("Key shift: held notes keep their pitch and still release on their own key") {
+    const KeyTuning tuning = makeKeyTuning(rastOnF());
+    Synth synth;
+    synth.prepare(44100.0);
+    synth.setTuning(tuning);
+    SynthParams p;
+    p.sound = SoundType::Synth;
+    p.decaySeconds = 0.5f;
+    synth.setParams(p);
+
+    synth.setKeyShift(2);
+    synth.noteOn(60, 0.8f);
+    synth.setKeyShift(-3);  // changed while the note is held
+    CHECK(synth.playingHz(60) == Approx(tuning.hz[62]));
+    synth.setTuning(tuning);  // a retune keeps the shift the note started with
+    renderSeconds(synth, 44100.0, 0.1);
+    CHECK(synth.playingHz(60) == Approx(tuning.hz[62]));
+    synth.noteOff(60);
+    renderSeconds(synth, 44100.0, 2.0);
+    CHECK(synth.activeVoiceCount() == 0);
+}
+
+TEST_CASE("Key shift: the note limit judges the shifted key") {
+    const KeyTuning tuning = makeKeyTuning(rastOnF());
+    Synth synth;
+    synth.prepare(44100.0);
+    synth.setTuning(tuning);
+    SynthParams p;
+    p.limit = NoteLimit::Snap;
+    synth.setParams(p);
+    synth.setKeyShift(1);
+    // Key 67 (G) shifted to 68 (G#, outside Rast on F) snaps to A half-flat (69).
+    synth.noteOn(67, 0.8f);
+    CHECK(synth.playingHz(67) == Approx(tuning.hz[69]));
+    synth.killAll();
+
+    p.limit = NoteLimit::Mute;
+    synth.setParams(p);
+    synth.noteOn(67, 0.8f);
+    CHECK(synth.activeVoiceCount() == 0);
+    synth.noteOn(68, 0.8f);  // 68 + 1 = 69, a maqam key
+    CHECK(synth.playingHz(68) == Approx(tuning.hz[69]));
+}
+
+TEST_CASE("Key shift works in Legato and when returning to a held key") {
+    const KeyTuning tuning = makeKeyTuning(rastOnF());
+    Synth synth;
+    synth.prepare(44100.0);
+    synth.setTuning(tuning);
+    SynthParams p;
+    p.mode = VoiceMode::Legato;
+    p.glideSeconds = 0.0f;
+    synth.setParams(p);
+    synth.setKeyShift(12);
+    synth.noteOn(60, 0.8f);
+    synth.noteOn(62, 0.8f);
+    CHECK(synth.playingHz(62) == Approx(tuning.hz[74]));
+    synth.noteOff(62);
+    CHECK(synth.playingHz(60) == Approx(tuning.hz[72]));
+}
