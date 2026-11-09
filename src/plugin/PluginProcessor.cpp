@@ -5,11 +5,19 @@
 #include "PluginEditor.h"
 
 #include "core/NoteNames.h"
+#include "synth/TempoSync.h"
 
 using maqam::synth::kNumKeys;
 
 namespace {
 const juce::Identifier kStateType{"MaqamMasterState"};
+
+juce::StringArray noteValueNames() {
+    juce::StringArray names;
+    for (const auto& v : maqam::synth::kNoteValues)
+        names.add(v.name);
+    return names;
+}
 }
 
 juce::AudioProcessorValueTreeState::ParameterLayout MaqamProcessor::createLayout() {
@@ -39,6 +47,13 @@ juce::AudioProcessorValueTreeState::ParameterLayout MaqamProcessor::createLayout
     layout.add(std::make_unique<AudioParameterFloat>(ParameterID{"vibratoRate", 1}, "Vibrato rate",
                                                      NormalisableRange<float>(3.0f, 8.0f), 5.5f,
                                                      AudioParameterFloatAttributes().withLabel("Hz")));
+    // Tempo sync: glide time and vibrato rate as note values at the host's tempo.
+    layout.add(std::make_unique<AudioParameterBool>(ParameterID{"glideSync", 1}, "Glide sync", false));
+    layout.add(std::make_unique<AudioParameterChoice>(ParameterID{"glideNote", 1}, "Glide note", noteValueNames(),
+                                                      maqam::synth::noteValueIndex("1/32")));
+    layout.add(std::make_unique<AudioParameterBool>(ParameterID{"vibratoSync", 1}, "Vibrato sync", false));
+    layout.add(std::make_unique<AudioParameterChoice>(ParameterID{"vibratoNote", 1}, "Vibrato note",
+                                                      noteValueNames(), maqam::synth::noteValueIndex("1/8T")));
     layout.add(std::make_unique<AudioParameterInt>(ParameterID{"octave", 1}, "Octave", -2, 2, 0));
     layout.add(std::make_unique<AudioParameterInt>(ParameterID{"transpose", 1}, "Transpose", -12, 12, 0,
                                                    AudioParameterIntAttributes().withLabel("st")));
@@ -63,6 +78,10 @@ MaqamProcessor::MaqamProcessor()
     glideParam_ = parameters.getRawParameterValue("glide");
     vibratoParam_ = parameters.getRawParameterValue("vibrato");
     vibratoRateParam_ = parameters.getRawParameterValue("vibratoRate");
+    glideSyncParam_ = parameters.getRawParameterValue("glideSync");
+    glideNoteParam_ = parameters.getRawParameterValue("glideNote");
+    vibratoSyncParam_ = parameters.getRawParameterValue("vibratoSync");
+    vibratoNoteParam_ = parameters.getRawParameterValue("vibratoNote");
     octaveParam_ = parameters.getRawParameterValue("octave");
     transposeParam_ = parameters.getRawParameterValue("transpose");
     droneOnParam_ = parameters.getRawParameterValue("droneOn");
@@ -182,9 +201,20 @@ void MaqamProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBu
     p.gain = juce::Decibels::decibelsToGain(volumeParam_->load(), -100.0f);
     p.limit = static_cast<NoteLimit>(juce::jlimit(0, 2, choice(limitParam_)));
     p.mode = static_cast<VoiceMode>(juce::jlimit(0, 2, choice(modeParam_)));
-    p.glideSeconds = glideParam_->load();
     p.vibrato = vibratoParam_->load();
-    p.vibratoRateHz = vibratoRateParam_->load();
+
+    // Tempo sync follows the host's tempo (120 BPM when there is none, e.g. standalone).
+    double bpm = kDefaultBpm;
+    if (auto* playHead = getPlayHead())
+        if (const auto position = playHead->getPosition())
+            if (const auto hostBpm = position->getBpm())
+                bpm = *hostBpm;
+    p.glideSeconds = glideSyncParam_->load() > 0.5f
+                         ? static_cast<float>(noteValueSeconds(choice(glideNoteParam_), bpm))
+                         : glideParam_->load();
+    p.vibratoRateHz = vibratoSyncParam_->load() > 0.5f
+                          ? static_cast<float>(noteValueRateHz(choice(vibratoNoteParam_), bpm))
+                          : vibratoRateParam_->load();
     synth_.setParams(p);
     synth_.setKeyShift(keyShift());
 

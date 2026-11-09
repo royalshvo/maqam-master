@@ -2,6 +2,7 @@
 add_library(maqam_synth STATIC
     Drone.cpp
     KeyTuning.cpp
+    TempoSync.cpp
     Synth.cpp
 )
 

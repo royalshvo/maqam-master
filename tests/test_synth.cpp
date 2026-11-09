@@ -11,6 +11,7 @@
 #include "synth/Drone.h"
 #include "synth/KeyTuning.h"
 #include "synth/Synth.h"
+#include "synth/TempoSync.h"
 
 using namespace maqam;
 using namespace maqam::synth;
@@ -618,4 +619,59 @@ TEST_CASE("Key shift works in Legato and when returning to a held key") {
     CHECK(synth.playingHz(62) == Approx(tuning.hz[74]));
     synth.noteOff(62);
     CHECK(synth.playingHz(60) == Approx(tuning.hz[72]));
+}
+
+// ---------------------------------------------------------------- tempo sync
+
+TEST_CASE("Note values give exact lengths at the song tempo", "[synth][tempo]") {
+    auto secs = [](const char* name, double bpm) { return noteValueSeconds(noteValueIndex(name), bpm); };
+    CHECK(secs("1/4", 120.0) == Approx(0.5));
+    CHECK(secs("1/1", 120.0) == Approx(2.0));
+    CHECK(secs("1/8.", 120.0) == Approx(0.375));     // dotted = 1.5x
+    CHECK(secs("1/8T", 120.0) == Approx(1.0 / 6.0)); // triplet = 2/3
+    CHECK(secs("1/32", 120.0) == Approx(0.0625));
+    CHECK(secs("1/4", 90.0) == Approx(2.0 / 3.0));
+    // Lengths only get shorter down the list's straight values.
+    for (const char* pair : {"1/1", "1/2", "1/4", "1/8", "1/16", "1/32"})
+        CHECK(noteValueIndex(pair) >= 0);
+}
+
+TEST_CASE("Tempo sync falls back to 120 BPM and clamps", "[synth][tempo]") {
+    const int quarter = noteValueIndex("1/4");
+    CHECK(noteValueSeconds(quarter, 0.0) == Approx(0.5));
+    CHECK(noteValueSeconds(quarter, -5.0) == Approx(0.5));
+    CHECK(noteValueSeconds(quarter, std::nan("")) == Approx(0.5));
+    CHECK(noteValueSeconds(-3, 120.0) == Approx(2.0));    // clamped to 1/1
+    CHECK(noteValueSeconds(999, 120.0) == Approx(0.03125)); // clamped to 1/64
+    CHECK(noteValueIndex("1/5") == -1);
+}
+
+TEST_CASE("Synced vibrato rate is one cycle per note value", "[synth][tempo]") {
+    CHECK(noteValueRateHz(noteValueIndex("1/8T"), 120.0) == Approx(6.0));
+    CHECK(noteValueRateHz(noteValueIndex("1/16"), 120.0) == Approx(8.0));
+    CHECK(noteValueRateHz(noteValueIndex("1/8"), 100.0) == Approx(100.0 / 30.0));
+    CHECK(noteValueRateHz(noteValueIndex("1/1"), 40.0) == Approx(0.25));  // clamped low
+    CHECK(noteValueRateHz(noteValueIndex("1/64"), 200.0) == Approx(20.0)); // clamped high
+}
+
+TEST_CASE("A synced glide lands exactly in the note value's time", "[synth][tempo]") {
+    constexpr double sr = 48000.0;
+    const KeyTuning t = makeKeyTuning(rastOnF());
+    Synth s;
+    s.prepare(sr);
+    SynthParams p;
+    p.sound = SoundType::Synth;
+    p.mode = VoiceMode::Legato;
+    p.glideSeconds = static_cast<float>(noteValueSeconds(noteValueIndex("1/16"), 120.0));  // 0.125 s
+    s.setParams(p);
+    s.setTuning(t);
+    std::vector<float> buf(static_cast<size_t>(sr));
+    s.noteOn(65, 1.0f);
+    s.render(buf.data(), 256);
+    s.noteOn(67, 1.0f);
+    const int half = static_cast<int>(0.0625 * sr);
+    s.render(buf.data(), half - 64);
+    CHECK(s.currentHz(67) != Approx(t.hz[67]).epsilon(1e-6));  // still sliding halfway
+    s.render(buf.data(), half + 128);
+    CHECK(s.currentHz(67) == Approx(t.hz[67]).epsilon(1e-9));  // landed
 }

@@ -48,10 +48,12 @@ public:
 private:
     void changeListenerCallback(juce::ChangeBroadcaster*) override;
     void showSelectedMaqam();
+    void updateSyncControls();
 
     struct Knob {
         juce::Slider slider{juce::Slider::RotaryHorizontalVerticalDrag, juce::Slider::TextBoxBelow};
         juce::Label label;
+        juce::String paramId;
         std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> attachment;
     };
 
@@ -69,6 +71,15 @@ private:
     std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> droneAttachment_;
     std::vector<std::unique_ptr<Knob>> knobs_;
     std::vector<std::unique_ptr<Knob>> steppers_;  // Octave, Transpose (- / + buttons)
+    // Tempo sync under the Glide and Vib. rate knobs: when on, a note-value menu replaces the knob.
+    struct Sync {
+        Knob* knob = nullptr;
+        juce::ToggleButton button{"Sync"};
+        juce::ComboBox box;
+        std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> buttonAttachment;
+        std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> boxAttachment;
+    };
+    std::vector<std::unique_ptr<Sync>> syncs_;
     juce::Label summary_;
     juce::Label draftWarning_;
     MaqamKeyboard keyboard_;

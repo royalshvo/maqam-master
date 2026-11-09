@@ -150,6 +150,7 @@ MaqamEditor::MaqamEditor(MaqamProcessor& p)
           std::pair{"vibrato", "Vibrato"}, std::pair{"vibratoRate", "Vib. rate"}, std::pair{"droneLevel", "Drone level"},
           std::pair{"reverb", "Reverb"}, std::pair{"volume", "Volume"}}) {
         auto knob = std::make_unique<Knob>();
+        knob->paramId = paramId;
         knob->slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 64, 18);
         knob->attachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
             processor_.parameters, paramId, knob->slider);
@@ -158,6 +159,24 @@ MaqamEditor::MaqamEditor(MaqamProcessor& p)
         addAndMakeVisible(knob->slider);
         addAndMakeVisible(knob->label);
         knobs_.push_back(std::move(knob));
+    }
+
+    for (const auto& [knobParam, syncParam, noteParam] :
+         {std::tuple{"glide", "glideSync", "glideNote"}, std::tuple{"vibratoRate", "vibratoSync", "vibratoNote"}}) {
+        auto sync = std::make_unique<Sync>();
+        for (auto& k : knobs_)
+            if (k->paramId == knobParam)
+                sync->knob = k.get();
+        if (auto* param = dynamic_cast<juce::AudioParameterChoice*>(processor_.parameters.getParameter(noteParam)))
+            sync->box.addItemList(param->choices, 1);
+        sync->boxAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
+            processor_.parameters, noteParam, sync->box);
+        sync->buttonAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
+            processor_.parameters, syncParam, sync->button);
+        sync->button.onStateChange = [this] { updateSyncControls(); };
+        addAndMakeVisible(sync->button);
+        addChildComponent(sync->box);
+        syncs_.push_back(std::move(sync));
     }
 
     for (const auto& [paramId, name] : {std::pair{"octave", "Octave"}, std::pair{"transpose", "Transpose"}}) {
@@ -185,7 +204,8 @@ MaqamEditor::MaqamEditor(MaqamProcessor& p)
 
     processor_.addChangeListener(this);
     showSelectedMaqam();
-    setSize(800, 560);
+    updateSyncControls();
+    setSize(800, 590);
 }
 
 MaqamEditor::~MaqamEditor() {
@@ -244,12 +264,22 @@ void MaqamEditor::showSelectedMaqam() {
             "\nOther keys play normal 12-TET, or are muted / snapped by Keys. Mod wheel adds vibrato."
             "\nOctave / Transpose move which key plays which note (the maqam itself stays put):"
             "\n  e.g. Transpose +5 puts the tonic F on a C pad of a Launchpad."
+            "\nSync (under Glide / Vib. rate): set them in note values that follow the song tempo."
             "\nDrone: the tonic and its octave, always in tune; it follows maqam and tonic changes.";
     summary_.setText(text, juce::dontSendNotification);
 
     draftWarning_.setText(m->reviewed ? juce::String()
                                       : "DRAFT: this maqam has not yet been reviewed by a player or teacher.",
                           juce::dontSendNotification);
+}
+
+void MaqamEditor::updateSyncControls() {
+    for (auto& sync : syncs_) {
+        const bool on = sync->button.getToggleState();
+        sync->box.setVisible(on);
+        if (sync->knob != nullptr)
+            sync->knob->slider.setVisible(!on);
+    }
 }
 
 void MaqamEditor::paint(juce::Graphics& g) {
@@ -287,12 +317,18 @@ void MaqamEditor::resized() {
     area.removeFromBottom(8);
     draftWarning_.setBounds(area.removeFromBottom(22));
 
-    auto knobRow = area.removeFromBottom(112);
+    auto knobRow = area.removeFromBottom(134);
     const int knobWidth = knobRow.getWidth() / static_cast<int>(knobs_.size());
     for (auto& k : knobs_) {
         auto col = knobRow.removeFromLeft(knobWidth);
         k->label.setBounds(col.removeFromTop(18));
+        auto syncRow = col.removeFromBottom(22);  // Sync toggle (Glide, Vib. rate)
         k->slider.setBounds(col);
+        for (auto& sync : syncs_)
+            if (sync->knob == k.get()) {
+                sync->button.setBounds(syncRow.withSizeKeepingCentre(64, 22));
+                sync->box.setBounds(col.withSizeKeepingCentre(juce::jmin(84, col.getWidth() - 4), 26));
+            }
     }
     area.removeFromBottom(6);
     summary_.setBounds(area);

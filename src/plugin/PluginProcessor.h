@@ -95,6 +95,10 @@ private:
     std::atomic<float>* glideParam_ = nullptr;
     std::atomic<float>* vibratoParam_ = nullptr;
     std::atomic<float>* vibratoRateParam_ = nullptr;
+    std::atomic<float>* glideSyncParam_ = nullptr;
+    std::atomic<float>* glideNoteParam_ = nullptr;
+    std::atomic<float>* vibratoSyncParam_ = nullptr;
+    std::atomic<float>* vibratoNoteParam_ = nullptr;
     std::atomic<float>* octaveParam_ = nullptr;
     std::atomic<float>* transposeParam_ = nullptr;
     std::atomic<float>* droneOnParam_ = nullptr;
