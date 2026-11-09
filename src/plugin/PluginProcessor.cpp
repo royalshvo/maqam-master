@@ -39,6 +39,11 @@ juce::AudioProcessorValueTreeState::ParameterLayout MaqamProcessor::createLayout
     layout.add(std::make_unique<AudioParameterFloat>(ParameterID{"vibratoRate", 1}, "Vibrato rate",
                                                      NormalisableRange<float>(3.0f, 8.0f), 5.5f,
                                                      AudioParameterFloatAttributes().withLabel("Hz")));
+    layout.add(std::make_unique<AudioParameterBool>(ParameterID{"droneOn", 1}, "Drone", false));
+    layout.add(std::make_unique<AudioParameterFloat>(ParameterID{"droneLevel", 1}, "Drone level",
+                                                     NormalisableRange<float>(0.0f, 1.0f), 0.5f));
+    layout.add(std::make_unique<AudioParameterChoice>(ParameterID{"droneOctave", 1}, "Drone octave",
+                                                      StringArray{"2 oct. down", "1 oct. down", "Tonic"}, 1));
     return layout;
 }
 
@@ -55,6 +60,9 @@ MaqamProcessor::MaqamProcessor()
     glideParam_ = parameters.getRawParameterValue("glide");
     vibratoParam_ = parameters.getRawParameterValue("vibrato");
     vibratoRateParam_ = parameters.getRawParameterValue("vibratoRate");
+    droneOnParam_ = parameters.getRawParameterValue("droneOn");
+    droneLevelParam_ = parameters.getRawParameterValue("droneLevel");
+    droneOctaveParam_ = parameters.getRawParameterValue("droneOctave");
 
     try {
         library_ = maqam::parseLibrary(std::string(BinaryData::maqams_json, BinaryData::maqams_jsonSize));
@@ -114,6 +122,8 @@ void MaqamProcessor::retune() {
 
 void MaqamProcessor::prepareToPlay(double sampleRate, int) {
     synth_.prepare(sampleRate);
+    drone_.prepare(sampleRate);
+    drone_.setTonicHz(tuningExchange_.current().tonicHz, 0.0);
     reverb_.setSampleRate(sampleRate);
     reverb_.reset();
     keyboardState.reset();
@@ -149,8 +159,10 @@ void MaqamProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBu
     // Notes played on the on-screen keyboard join the host's MIDI.
     keyboardState.processNextMidiBuffer(midi, 0, numSamples, true);
 
-    if (tuningExchange_.fetch())
+    if (tuningExchange_.fetch()) {
         synth_.setTuning(tuningExchange_.current());
+        drone_.setTonicHz(tuningExchange_.current().tonicHz);
+    }
 
     using namespace maqam::synth;
     auto choice = [](std::atomic<float>* param) { return juce::roundToInt(param->load()); };
@@ -166,6 +178,13 @@ void MaqamProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBu
     p.vibratoRateHz = vibratoRateParam_->load();
     synth_.setParams(p);
 
+    DroneParams dp;
+    dp.on = droneOnParam_->load() > 0.5f;
+    const float droneLevel = droneLevelParam_->load();
+    dp.gain = droneLevel * droneLevel * 0.6f * p.gain;
+    dp.octave = juce::jlimit(0, 2, choice(droneOctaveParam_)) - 2;
+    drone_.setParams(dp);
+
     // Render up to each MIDI event so notes start on their exact sample.
     float* out = buffer.getWritePointer(0);
     int pos = 0;
@@ -178,6 +197,7 @@ void MaqamProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBu
     }
     if (numSamples > pos)
         synth_.render(out + pos, numSamples - pos);
+    drone_.render(out, numSamples);
 
     const float amount = reverbParam_->load();
     const int channels = buffer.getNumChannels();

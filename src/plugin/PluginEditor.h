@@ -64,7 +64,9 @@ private:
         juce::Label label;
         std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> attachment;
     };
-    std::vector<std::unique_ptr<Choice>> choices_;  // Sound, Keys (note limit), Voice mode
+    std::vector<std::unique_ptr<Choice>> choices_;  // Sound, Keys (note limit), Voice mode, Drone octave
+    juce::ToggleButton droneButton_{"Drone"};
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> droneAttachment_;
     std::vector<std::unique_ptr<Knob>> knobs_;
     juce::Label summary_;
     juce::Label draftWarning_;

@@ -18,6 +18,7 @@ struct KeyTuning {
     std::array<int, kNumKeys> snapKey{}; // nearest maqam key in pitch (itself for maqam keys);
                                          // on an exact tie the lower one
     bool hasMaqam = false;               // false for plain 12-TET: no key counts as "outside"
+    double tonicHz = 0.0;                // the maqam's tonic (for the drone); 0 for plain 12-TET
 };
 
 /** Every key from a tuning table. Keys outside the maqam play their 12-TET pitch (the table

@@ -11,6 +11,7 @@
 #include "core/KeyMapping.h"
 #include "core/MaqamData.h"
 #include "core/Tuning.h"
+#include "synth/Drone.h"
 #include "synth/KeyTuning.h"
 #include "synth/Synth.h"
 
@@ -79,6 +80,7 @@ private:
 
     // Audio thread
     maqam::synth::Synth synth_;
+    maqam::synth::Drone drone_;
     maqam::synth::TuningExchange tuningExchange_;
     juce::Reverb reverb_;
     std::atomic<float>* soundParam_ = nullptr;
@@ -91,6 +93,9 @@ private:
     std::atomic<float>* glideParam_ = nullptr;
     std::atomic<float>* vibratoParam_ = nullptr;
     std::atomic<float>* vibratoRateParam_ = nullptr;
+    std::atomic<float>* droneOnParam_ = nullptr;
+    std::atomic<float>* droneLevelParam_ = nullptr;
+    std::atomic<float>* droneOctaveParam_ = nullptr;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MaqamProcessor)
 };

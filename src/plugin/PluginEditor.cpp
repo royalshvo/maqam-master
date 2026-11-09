@@ -117,7 +117,7 @@ MaqamEditor::MaqamEditor(MaqamProcessor& p)
     addAndMakeVisible(tonicBox_);
 
     for (const auto& [paramId, name] : {std::pair{"sound", "Sound"}, std::pair{"limit", "Keys"},
-                                        std::pair{"voiceMode", "Mode"}}) {
+                                        std::pair{"voiceMode", "Mode"}, std::pair{"droneOctave", "Drone"}}) {
         auto c = std::make_unique<Choice>();
         if (auto* param = dynamic_cast<juce::AudioParameterChoice*>(processor_.parameters.getParameter(paramId)))
             c->box.addItemList(param->choices, 1);
@@ -130,11 +130,15 @@ MaqamEditor::MaqamEditor(MaqamProcessor& p)
         choices_.push_back(std::move(c));
     }
     choices_[1]->box.onChange = [this] { keyboard_.repaint(); };  // dim or undim outside keys
+    droneButton_.setButtonText("On");
+    droneAttachment_ =
+        std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(processor_.parameters, "droneOn", droneButton_);
+    addAndMakeVisible(droneButton_);
 
     for (const auto& [paramId, name] :
          {std::pair{"brightness", "Brightness"}, std::pair{"decay", "Decay"}, std::pair{"glide", "Glide"},
-          std::pair{"vibrato", "Vibrato"}, std::pair{"vibratoRate", "Vib. rate"}, std::pair{"reverb", "Reverb"},
-          std::pair{"volume", "Volume"}}) {
+          std::pair{"vibrato", "Vibrato"}, std::pair{"vibratoRate", "Vib. rate"}, std::pair{"droneLevel", "Drone level"},
+          std::pair{"reverb", "Reverb"}, std::pair{"volume", "Volume"}}) {
         auto knob = std::make_unique<Knob>();
         knob->slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 64, 18);
         knob->attachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
@@ -213,7 +217,8 @@ void MaqamEditor::showSelectedMaqam() {
     text << "\nTonic: " << juce::String::fromUTF8(maqam::spellTonic(tonic).compact(true).c_str())
          << "  (MIDI " << tonic.midiNote << ", " << juce::String(maqam::frequencyHz(tonic, 0.0), 2) << " Hz)";
     text << "\n\nKeyboard: gold = tonic, green = ghammaz, blue = maqam note, purple = descending note."
-            "\nOther keys play normal 12-TET, or are muted / snapped by Keys. Mod wheel adds vibrato.";
+            "\nOther keys play normal 12-TET, or are muted / snapped by Keys. Mod wheel adds vibrato."
+            "\nDrone: the tonic and its octave, always in tune; it follows maqam and tonic changes.";
     summary_.setText(text, juce::dontSendNotification);
 
     draftWarning_.setText(m->reviewed ? juce::String()
@@ -236,12 +241,13 @@ void MaqamEditor::resized() {
     area.removeFromTop(8);
 
     auto row = area.removeFromTop(26);
-    const int widths[] = {90, 140, 90};
+    const int widths[] = {90, 140, 90, 110};
     for (size_t i = 0; i < choices_.size(); ++i) {
         choices_[i]->label.setBounds(row.removeFromLeft(48));
         choices_[i]->box.setBounds(row.removeFromLeft(widths[i]));
-        row.removeFromLeft(14);
+        row.removeFromLeft(i + 1 == choices_.size() ? 4 : 14);
     }
+    droneButton_.setBounds(row.removeFromLeft(50));
     area.removeFromTop(10);
 
     auto keys = area.removeFromBottom(120);

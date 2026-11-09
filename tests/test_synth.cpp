@@ -8,6 +8,7 @@
 
 #include "core/KeyMapping.h"
 #include "core/MaqamData.h"
+#include "synth/Drone.h"
 #include "synth/KeyTuning.h"
 #include "synth/Synth.h"
 
@@ -438,4 +439,96 @@ TEST_CASE("Vibrato starts after the note has begun") {
         hi = std::max(hi, c);
     }
     CHECK(hi - lo < 1.0);
+}
+
+namespace {
+
+std::vector<float> renderDrone(Drone& drone, double sampleRate, double seconds, int block = 256) {
+    std::vector<float> out(static_cast<size_t>(seconds * sampleRate), 0.0f);
+    for (size_t pos = 0; pos < out.size(); pos += static_cast<size_t>(block)) {
+        const int n = static_cast<int>(std::min<size_t>(static_cast<size_t>(block), out.size() - pos));
+        drone.render(out.data() + pos, n);
+    }
+    return out;
+}
+
+double maxStep(const std::vector<float>& x) {
+    double m = 0.0;
+    for (size_t i = 1; i < x.size(); ++i)
+        m = std::max(m, static_cast<double>(std::abs(x[i] - x[i - 1])));
+    return m;
+}
+
+} // namespace
+
+TEST_CASE("KeyTuning carries the maqam's tonic for the drone; plain 12-TET has none") {
+    const KeyTuning t = makeKeyTuning(rastOnF());
+    CHECK(t.tonicHz == Approx(midiNoteToHz(65)).epsilon(1e-12));
+    CHECK(twelveTetKeyTuning().tonicHz == 0.0);
+}
+
+TEST_CASE("The drone plays the exact tonic in the chosen register") {
+    const double sr = GENERATE(44100.0, 48000.0);
+    const int octave = GENERATE(-2, -1, 0);
+    const KeyTuning t = makeKeyTuning(rastOnF());
+    Drone drone;
+    drone.prepare(sr);
+    drone.setParams({true, 0.25f, octave});
+    drone.setTonicHz(t.tonicHz);
+    const auto x = renderDrone(drone, sr, 1.0);
+    const double expected = t.tonicHz * std::exp2(octave);
+    CHECK(drone.targetHz() == Approx(expected));
+    CHECK(std::abs(centsBetween(measureHz(x, sr, expected, static_cast<size_t>(0.6 * sr)), expected)) < 0.2);
+    CHECK(peak(x) > 0.1);
+    CHECK(peak(x) < 0.5);
+}
+
+TEST_CASE("The drone slides to a new tonic without a jump and lands exactly on it") {
+    const double sr = 48000.0;
+    const Maqam* rast = library().findMaqam("rast");
+    REQUIRE(rast != nullptr);
+    const KeyTuning onF = makeKeyTuning(makeTwelveKeyTable(*rast, Tonic{65, 0.0}));
+    const KeyTuning onG = makeKeyTuning(makeTwelveKeyTable(*rast, Tonic{67, 0.0}));
+    Drone drone;
+    drone.prepare(sr);
+    drone.setParams({true, 0.25f, -1});
+    drone.setTonicHz(onF.tonicHz);
+    const auto before = renderDrone(drone, sr, 1.5);
+    drone.setTonicHz(onG.tonicHz, 0.3);
+    const auto after = renderDrone(drone, sr, 1.0);
+    // No discontinuity: the sample-to-sample step stays within what the steady tone shows.
+    CHECK(maxStep(after) < 1.2 * maxStep(before) + 1e-3);
+    CHECK(std::abs(after.front() - before.back()) < 1.2 * maxStep(before) + 1e-3);
+    const double expected = onG.tonicHz / 2.0;
+    CHECK(std::abs(centsBetween(measureHz(after, sr, expected, static_cast<size_t>(0.5 * sr)), expected)) < 0.2);
+}
+
+TEST_CASE("The drone is silent when off or without a maqam, and fades in and out smoothly") {
+    const double sr = 44100.0;
+    Drone drone;
+    drone.prepare(sr);
+
+    drone.setParams({false, 0.25f, -1});
+    drone.setTonicHz(makeKeyTuning(rastOnF()).tonicHz);
+    CHECK(peak(renderDrone(drone, sr, 0.2)) == 0.0);
+
+    Drone plain;
+    plain.prepare(sr);
+    plain.setParams({true, 0.25f, -1});
+    plain.setTonicHz(twelveTetKeyTuning().tonicHz);
+    CHECK(peak(renderDrone(plain, sr, 0.2)) == 0.0);
+
+    drone.setParams({true, 0.25f, -1});
+    const auto in = renderDrone(drone, sr, 2.0);
+    CHECK(std::abs(in.front()) < 1e-3);
+    const std::vector<float> firstMs(in.begin(), in.begin() + static_cast<long>(sr * 0.001));
+    const std::vector<float> lastPart(in.end() - static_cast<long>(sr * 0.1), in.end());
+    CHECK(peak(firstMs) < 0.05 * peak(lastPart));
+
+    drone.setParams({false, 0.25f, -1});
+    const auto out = renderDrone(drone, sr, 3.0);
+    CHECK(maxStep(out) <= maxStep(in) + 1e-6);
+    const std::vector<float> tail(out.end() - static_cast<long>(sr * 0.1), out.end());
+    CHECK(peak(tail) < 1e-4);
+    CHECK_FALSE(drone.sounding());
 }

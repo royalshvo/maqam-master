@@ -16,9 +16,9 @@ Microtonal maqam instrument/teacher. JUCE (C++17+), CMake, VST3/AU + standalone.
 - Test: `ctest --test-dir build`
 - Fast core-only build (no JUCE download): `cmake -B build-core -G Ninja -DMAQAM_BUILD_PLUGIN=OFF && cmake --build build-core && ctest --test-dir build-core`
 - Listen to the tuning: `build/tools/render_scales scales` (add `--reference-tonic` for traditional tonics)
-- Listen to the built-in synth: `build/tools/render_synth` (writes `scales/synth/`; `--sound pluck|synth|ney`, `--vibrato 0..1`, `--legato GLIDE_S`)
+- Listen to the built-in synth: `build/tools/render_synth` (writes `scales/synth/`; `--sound pluck|synth|ney`, `--vibrato 0..1`, `--legato GLIDE_S`, `--drone`)
 - Install the plugin for Ableton: copy `build/src/plugin/MaqamMaster_artefacts/Debug/VST3/Maqam Master.vst3` to `~/Library/Audio/Plug-Ins/VST3/`, then restart Live.
-- Built-in synth lives in `src/synth` (no JUCE, tested in `tests/test_synth.cpp`): every voice takes an exact frequency from a `KeyTuning`, handed to the audio thread through `TuningExchange`.
+- Built-in synth and tonic drone live in `src/synth` (no JUCE, tested in `tests/test_synth.cpp`): every voice takes an exact frequency from a `KeyTuning`, handed to the audio thread through `TuningExchange`.
 - In plugin files, include JUCE headers before any standard header: `<array>` first makes JUCE's macOS SDK check fail.
 - Export tuning files for Ableton Live 12 / Scala synths: `build/tools/export_tunings tunings` (`.ascl`, `.scl`, `.kbm`, in 12-key and one-degree-per-key layouts)
 - Teacher review page: `review/index.html`, published as https://claude.ai/artifact/R2Q47XQiXA35gdh8bNKNVU. After changing `data/maqams.json`, run `build/tools/export_review_data` and republish with `review/review-data.json`. Answers are in the page's `reviews` collection, one doc per maqam per reviewer.

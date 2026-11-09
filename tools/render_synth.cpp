@@ -3,10 +3,11 @@
 // plugin uses: up the ascending keys, then down using the descending-form keys where the
 // maqam has them.
 //
-// Usage: render_synth [output_dir] [--sound pluck|synth|ney] [--vibrato 0..1] [--legato GLIDE_S]
+// Usage: render_synth [output_dir] [--sound pluck|synth|ney] [--vibrato 0..1] [--legato GLIDE_S] [--drone]
 //                     [--tonic-midi N] [--a4 HZ] [--data PATH]
 //   Default: Pluck, no vibrato, separate notes, tonic F4 (MIDI 65), A4 = 440 Hz, output to ./scales/synth
 //   --legato plays each note before releasing the last, gliding over GLIDE_S seconds.
+//   --drone adds the tonic drone (tonic + octave, one octave below the tonic key).
 
 #include <cstdlib>
 #include <filesystem>
@@ -18,6 +19,7 @@
 #include "core/KeyMapping.h"
 #include "core/MaqamData.h"
 #include "core/Render.h"
+#include "synth/Drone.h"
 #include "synth/KeyTuning.h"
 #include "synth/Synth.h"
 
@@ -32,6 +34,7 @@ int main(int argc, char** argv) {
     double a4 = kDefaultA4Hz;
     float vibrato = 0.0f;
     float legato = -1.0f;  // < 0: separate notes
+    bool drone = false;
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
         if (arg == "--sound" && i + 1 < argc) {
@@ -41,6 +44,8 @@ int main(int argc, char** argv) {
             vibrato = static_cast<float>(std::atof(argv[++i]));
         } else if (arg == "--legato" && i + 1 < argc) {
             legato = static_cast<float>(std::atof(argv[++i]));
+        } else if (arg == "--drone") {
+            drone = true;
         } else if (arg == "--tonic-midi" && i + 1 < argc) {
             tonicMidi = std::atoi(argv[++i]);
         } else if (arg == "--a4" && i + 1 < argc) {
@@ -48,7 +53,7 @@ int main(int argc, char** argv) {
         } else if (arg == "--data" && i + 1 < argc) {
             dataPath = argv[++i];
         } else if (!arg.empty() && arg[0] == '-') {
-            std::cerr << "usage: render_synth [output_dir] [--sound pluck|synth|ney] [--vibrato 0..1] [--legato GLIDE_S] "
+            std::cerr << "usage: render_synth [output_dir] [--sound pluck|synth|ney] [--vibrato 0..1] [--legato GLIDE_S] [--drone] "
                          "[--tonic-midi N] [--a4 HZ] [--data PATH]\n";
             return 2;
         } else {
@@ -121,11 +126,21 @@ int main(int argc, char** argv) {
             if (previous >= 0)
                 player.noteOff(previous);
             player.render(out.data() + pos, static_cast<int>(out.size() - pos));
+            if (drone) {
+                synth::Drone d;
+                d.prepare(sr);
+                d.setParams({true, 0.15f, -1});
+                d.setTonicHz(tuning.tonicHz);
+                d.render(out.data(), static_cast<int>(out.size()));
+                const size_t fade = static_cast<size_t>(0.5 * sr);  // fade the drone out at the end
+                for (size_t i = 0; i < fade && i < out.size(); ++i)
+                    out[out.size() - 1 - i] *= static_cast<float>(i) / static_cast<float>(fade);
+            }
 
             const char* soundName = sound == synth::SoundType::Pluck ? "_pluck"
                                     : sound == synth::SoundType::Synth ? "_synth" : "_ney";
             const std::string name = m.id + soundName + (vibrato > 0.0f ? "_vibrato" : "") +
-                                     (legato >= 0.0f ? "_legato" : "") + (m.reviewed ? "" : "_DRAFT") + ".wav";
+                                     (legato >= 0.0f ? "_legato" : "") + (drone ? "_drone" : "") + (m.reviewed ? "" : "_DRAFT") + ".wav";
             const std::string path = (fs::path(outDir) / name).string();
             if (!writeWav16(path, out, sr)) {
                 std::cerr << "error: cannot write " << path << "\n";

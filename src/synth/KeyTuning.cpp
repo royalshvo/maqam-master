@@ -14,6 +14,7 @@ KeyTuning makeKeyTuning(const TuningTable& table) {
         cents[k] = 1200.0 * std::log2(t.hz[k]);
         t.hasMaqam = t.hasMaqam || t.degree[k] != 0;
     }
+    t.tonicHz = t.hasMaqam ? table.tonicHz : 0.0;
     for (size_t k = 0; k < static_cast<size_t>(kNumKeys); ++k) {
         t.snapKey[k] = static_cast<int>(k);
         if (t.degree[k] != 0)

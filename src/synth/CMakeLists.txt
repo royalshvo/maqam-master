@@ -1,5 +1,6 @@
 # The built-in synth: plain C++, no JUCE, so it is unit-tested like the core.
 add_library(maqam_synth STATIC
+    Drone.cpp
     KeyTuning.cpp
     Synth.cpp
 )
