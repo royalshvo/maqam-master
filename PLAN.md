@@ -4,15 +4,18 @@ A microtonal maqam instrument and teacher, as a JUCE VST3/AU plugin with a **bui
 
 ## Product pillars
 1. **Maqam Explorer** – pick a maqam, see its structure (ajnas, tonic, ghammaz, ascending/descending forms).
+   - Note cells with cents, and an **interval row** underneath with quarter-tone intervals (150, 250 cents) highlighted.
+   - **Listen buttons:** play the lower jins, tonic → ghammaz, the upper jins, and the scale up and down. (Audition only; guided lessons stay in Learn Mode, v1.1.)
+   - A short **mood** line per maqam, stored in `maqams.json` (draft until reviewed).
 2. **Jins Library** – every jins defined once, and every maqam decomposed into ajnas.
-3. **Illuminated Keyboard** – colors for tonic, characteristic notes, quarter-tones, passing notes.
+3. **Illuminated Keyboard** – colors for tonic, characteristic notes, quarter-tones, passing notes. Each retuned key shows a **cents badge** with its offset (e.g. the E key in Rast on C: "−50¢"). Clickable, and mirrors incoming MIDI.
 4. **Play Mode** – play freely; plugin highlights and snaps to the selected maqam. Qanun-style controls:
    - **Mandal switches** – one lever per note (pitch class), like the mandals on a qanun: flip it during a performance to raise or lower that note in fixed steps (quarter tone for Arabic, comma steps for Turkish, set by the tuning preset). Playable from the UI, MIDI CC or keyswitches. Also used for the ascending/descending change (e.g. Rast's B half-flat ↔ B♭) and for switching to another maqam or jins live.
    - **Bend knob** – pitch bend with a selectable range in cents (e.g. ±50 / ±100 / ±200) and an optional maqam-aware mode that bends to the next maqam degree instead of a fixed interval.
    - **Octave and transpose** – octave shift and transpose (semitone steps) for the keyboard/Launchpad, separate from the tonic.
    - **Modulation helper** – shows the ajnas you can move to from the current maqam because they share its notes (e.g. Rast on F → Bayati on G, Sikah on A½♭, Nahawand on C, Ajam on B♭), the way composers like Mohammed Abdel Wahab move between maqamat. One click lights that jins on the strings and keys. The links live in `maqams.json` (draft until reviewed), never in code.
-5. **Maqam Builder** – combine lower and upper ajnas (including overlapping ajnas).
-6. **Built-in sound engine** – simple, good-sounding synth with microtonal tuning, for demos, practice and lessons.
+5. **Maqam Builder** – combine lower and upper ajnas (including overlapping ajnas). When the result matches a known maqam, the Builder names it.
+6. **Built-in sound engine** – simple, good-sounding synth with microtonal tuning, for demos, practice and lessons. Includes a **drone** (tonic + octave, own level and sound) that follows maqam, tonic, transpose and octave changes smoothly.
 7. **Learn Mode** – guided lessons per jins (listen, play along, quiz).
 8. **Rhythm machine** – step sequencer with Arabic and trance presets.
 9. **Ableton integration** – Scala/Live tuning export, MIDI out (MPE or plain notes), MIDI clip export, and an MTS-ESP master.
@@ -52,6 +55,8 @@ A microtonal maqam instrument and teacher, as a JUCE VST3/AU plugin with a **bui
 - **Note spelling after transposition:** a naming system with half-flats/half-sharps for any selected tonic, since reference names (e.g. "E half-flat (Sikah)") only hold at the reference tonic.
 - **Reference pitch:** A4 configurable (default 440 Hz).
 - **UI look — qanun-inspired (draft mockup, Nov 2026):** the main view is a qanun body: trapezoid with the slanted peg side on the left, one horizontal string per maqam note (low notes nearest the player), mandal levers beside the pegs, cents on the bridge, and jins brackets beside the strings. Below it, the piano keyboard with jins bars above the keys and the role colours on each key.
+  - **Colours and type (from the Nov 2026 sketch):** dark flat panels (#12131B ground, #1A1B26 panels, #2A2B3A borders); tonic #E0A93B, lower jins #3FB8AF, upper jins #A895F5, ghammaz as a brass ring, quarter-tone badge #FF8A6A. Fonts: Marcellus (title), Inter (UI), JetBrains Mono (cents). Window about 1280×820, resizable with fixed aspect.
+  - **Iqa' player – decided: not in v1.0.** The rhythm player (Maqsum, Baladi, Sa'idi, synced to host tempo) ships in a later version with the rhythm machine.
 - **Tempo sync:** vibrato rate and glide can follow the host tempo in note values (e.g. 1/8, 1/16), with a free Hz/seconds mode. Sequencing stays in the v1.2 rhythm machine.
 - **Plugin state:** tonic, maqam, variant, tuning preset and synth settings saved in the DAW project.
 
@@ -76,6 +81,7 @@ A microtonal maqam instrument and teacher, as a JUCE VST3/AU plugin with a **bui
 - M4: another synth follows your tuning (Live 12 `.ascl` first, then MPE MIDI out and MTS-ESP). **`.ascl` part reached:** Live's instruments play the exported Rast tuning.
 
 ## Risks
+- **Ask the teacher:** Nahawand's upper jins (data has Kurd on the 5th ascending; some sources build it with Hijaz on the 5th), and the modulation suggestions.
 - **Tuning accuracy/tradition differences:** offer Arab/Turkish presets and per-degree cent offsets; credit reviewers.
 - **Reviewer availability:** finding and scheduling a player/teacher is its own risk; start now, don't block engineering on it.
 - **Licensing:** check JUCE (AGPLv3 or commercial tiers), VST3 SDK and MTS-ESP terms **before Phase 1**, not before release.
