@@ -51,6 +51,7 @@ struct Maqam {
     std::string id;
     std::string name;
     std::string nameAr;
+    std::string mood;                           // one plain sentence on how it feels (may be empty)
     ReferenceTonic referenceTonic;
     bool octaveRepeating = true;
     std::vector<double> ascending;              // cents from the tonic, degree 1 first

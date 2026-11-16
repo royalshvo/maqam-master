@@ -114,6 +114,13 @@ TEST_CASE("ascending variants") {
     const ResolvedScale rastUpper = ascending(get("hijaz"), "rast_upper");
     CHECK(rastUpper.cents[5] == 850.0);
 
+    // Bayati Shuri: Hijaz on the 4th lowers the 5th and raises the 6th (D E-half-flat F G Ab B C D).
+    const ResolvedScale shuri = ascending(get("bayati"), "shuri");
+    CHECK(shuri.cents == std::vector<double>{0.0, 150.0, 300.0, 500.0, 600.0, 900.0, 1000.0, 1200.0});
+    CHECK(shuri.ajnas[0].jinsId == "bayati");
+    CHECK(shuri.ajnas[1].jinsId == "hijaz");
+    CHECK(shuri.ajnas[1].rootDegree == 4);
+
     CHECK_THROWS_AS(resolveScale(get("hijaz"), Direction::Ascending, "nope"), std::invalid_argument);
 }
 

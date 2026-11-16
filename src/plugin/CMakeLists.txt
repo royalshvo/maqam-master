@@ -32,3 +32,13 @@ target_link_libraries(MaqamMaster
         juce::juce_recommended_config_flags
         juce::juce_recommended_lto_flags
         juce::juce_recommended_warning_flags)
+
+# Developer tool: draws the plugin window to a PNG, so the layout can be checked without a host.
+#   build/src/plugin/render_ui_artefacts/Debug/render_ui out.png [maqam_id] [variant_id]
+juce_add_console_app(render_ui PRODUCT_NAME "render_ui")
+target_sources(render_ui PRIVATE render_ui.cpp PluginProcessor.cpp PluginEditor.cpp)
+target_compile_definitions(render_ui PRIVATE
+    JucePlugin_Name="Maqam Master"
+    JUCE_WEB_BROWSER=0
+    JUCE_USE_CURL=0)
+target_link_libraries(render_ui PRIVATE maqam_synth MaqamBinaryData juce::juce_audio_utils)

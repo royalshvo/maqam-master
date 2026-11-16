@@ -8,6 +8,7 @@
 
 #include "core/KeyMapping.h"
 #include "core/MaqamData.h"
+#include "synth/Chorus.h"
 #include "synth/Drone.h"
 #include "synth/KeyTuning.h"
 #include "synth/Synth.h"
@@ -123,9 +124,13 @@ TEST_CASE("Both sounds play the exact frequency of the key") {
         synth.setParams({sound, static_cast<float>(brightness), 4.0f, 0.5f});
         synth.setTuning(tuning);
         synth.noteOn(key, 0.8f);
-        const auto out = renderSeconds(synth, sampleRate, 0.6);
+        // The Ney's breath noise rings around the note, which scatters a short measurement, so
+        // it is measured over longer windows (its tone oscillator is exact).
+        const bool ney = sound == SoundType::Ney;
+        const auto out = renderSeconds(synth, sampleRate, ney ? 1.3 : 0.6);
         const double want = tuning.hz[static_cast<size_t>(key)];
-        const double got = measureHz(out, sampleRate, want, static_cast<size_t>(0.2 * sampleRate));
+        const double got = ney ? measureHz(out, sampleRate, want, static_cast<size_t>(0.25 * sampleRate), 0.5, 0.5)
+                               : measureHz(out, sampleRate, want, static_cast<size_t>(0.2 * sampleRate));
         INFO("sound " << static_cast<int>(sound) << ", " << sampleRate << " Hz, brightness " << brightness
                       << ", key " << key << ": want " << want << " Hz, got " << got << " Hz");
         // The Synth oscillators are exact, but while its filter envelope closes the filter's
@@ -395,8 +400,15 @@ TEST_CASE("Vibrato swings around the exact pitch and its average stays in tune")
     INFO("mean pitch " << centsBetween(mean, hz) << " cents");
     CHECK(std::abs(centsBetween(mean, hz)) < 0.5);
 
-    // It really moves: close to the full +-35 cents swing.
-    CHECK(vibratoSpreadCents(out, sr, hz, 0.8) > 40.0);
+    // It really moves: close to the full +-35 cents swing. The Ney's vibrato is mostly breath,
+    // with about a third of that in pitch.
+    const double spread = vibratoSpreadCents(out, sr, hz, 0.8);
+    if (sound == SoundType::Ney) {
+        CHECK(spread > 14.0);
+        CHECK(spread < 32.0);
+    } else {
+        CHECK(spread > 40.0);
+    }
 }
 
 TEST_CASE("The mod wheel adds vibrato; with both at zero the pitch is steady") {
@@ -674,4 +686,178 @@ TEST_CASE("A synced glide lands exactly in the note value's time", "[synth][temp
     CHECK(s.currentHz(67) != Approx(t.hz[67]).epsilon(1e-6));  // still sliding halfway
     s.render(buf.data(), half + 128);
     CHECK(s.currentHz(67) == Approx(t.hz[67]).epsilon(1e-9));  // landed
+}
+
+// ---------------------------------------------------------------- pitch bend
+
+namespace {
+Synth bendSynth(const KeyTuning& tuning, double sr, float rangeCents, bool toMaqam) {
+    Synth synth;
+    synth.prepare(sr);
+    synth.setTuning(tuning);
+    SynthParams p;
+    p.sound = SoundType::Synth;
+    p.decaySeconds = 8.0f;
+    p.bendRangeCents = rangeCents;
+    p.bendToMaqam = toMaqam;
+    synth.setParams(p);
+    return synth;
+}
+} // namespace
+
+TEST_CASE("The pitch wheel bends by its range in cents, and sounds it", "[synth][bend]") {
+    const double sr = 48000.0;
+    const KeyTuning tuning = makeKeyTuning(rastOnF());
+    Synth synth = bendSynth(tuning, sr, 50.0f, false);
+    synth.noteOn(69, 0.8f);  // A half-flat
+    renderSeconds(synth, sr, 0.1);
+    CHECK(synth.bendCents(69) == 0.0);
+
+    synth.setPitchBend(1.0f);  // +50 cents: A half-flat up to A
+    const auto out = renderSeconds(synth, sr, 0.4);
+    CHECK(synth.bendCents(69) == Approx(50.0));
+    const double want = tuning.hz[69] * std::exp2(50.0 / 1200.0);
+    const double got = measureHz(out, sr, want, static_cast<size_t>(0.15 * sr));
+    CHECK(std::abs(centsBetween(got, want)) < 1.0);
+
+    synth.setPitchBend(-0.5f);
+    renderSeconds(synth, sr, 0.1);
+    CHECK(synth.bendCents(69) == Approx(-25.0));
+    synth.setPitchBend(0.0f);
+    renderSeconds(synth, sr, 0.1);
+    CHECK(synth.bendCents(69) == 0.0);  // back exactly in tune
+    CHECK(synth.currentHz(69) == Approx(tuning.hz[69]));
+}
+
+TEST_CASE("Bend is eased, but a note started with the wheel held starts bent", "[synth][bend]") {
+    const double sr = 48000.0;
+    const KeyTuning tuning = makeKeyTuning(rastOnF());
+    Synth synth = bendSynth(tuning, sr, 200.0f, false);
+    synth.noteOn(65, 0.8f);
+    renderSeconds(synth, sr, 0.05);
+    synth.setPitchBend(1.0f);
+    renderSeconds(synth, sr, 0.001, 1);  // 1 ms in: on the way, not there
+    const double early = synth.bendCents(65);
+    CHECK(early > 10.0);
+    CHECK(early < 190.0);
+    renderSeconds(synth, sr, 0.1);
+    CHECK(synth.bendCents(65) == Approx(200.0));
+
+    synth.noteOn(67, 0.8f);  // wheel still up
+    CHECK(synth.bendCents(67) == Approx(200.0));
+}
+
+TEST_CASE("Bend to maqam reaches the next maqam degree", "[synth][bend]") {
+    const double sr = 48000.0;
+    const KeyTuning tuning = makeKeyTuning(rastOnF());  // F G A-half-flat Bb C D E-half-flat
+    Synth synth = bendSynth(tuning, sr, 200.0f, true);
+    synth.noteOn(69, 0.8f);  // A half-flat
+    synth.setPitchBend(1.0f);
+    renderSeconds(synth, sr, 0.1);
+    CHECK(synth.bendCents(69) == Approx(centsBetween(tuning.hz[70], tuning.hz[69])));  // up to Bb, ~150 c
+    synth.setPitchBend(-1.0f);
+    renderSeconds(synth, sr, 0.1);
+    CHECK(synth.bendCents(69) == Approx(centsBetween(tuning.hz[67], tuning.hz[69])));  // down to G, ~-150 c
+    synth.setPitchBend(0.5f);
+    renderSeconds(synth, sr, 0.1);
+    CHECK(synth.bendCents(69) == Approx(0.5 * centsBetween(tuning.hz[70], tuning.hz[69])));
+
+    // Full bend lands exactly on the maqam pitch.
+    synth.setPitchBend(1.0f);
+    renderSeconds(synth, sr, 0.1);
+    CHECK(synth.currentHz(69) * std::exp2(synth.bendCents(69) / 1200.0) == Approx(tuning.hz[70]).epsilon(1e-9));
+
+    // Without a maqam (plain 12-TET) it falls back to the fixed range.
+    const KeyTuning plain = twelveTetKeyTuning();
+    Synth flat = bendSynth(plain, sr, 200.0f, true);
+    flat.noteOn(60, 0.8f);
+    flat.setPitchBend(1.0f);
+    renderSeconds(flat, sr, 0.1);
+    CHECK(flat.bendCents(60) == Approx(200.0));
+}
+
+// ---------------------------------------------------------------- chorus
+
+namespace {
+std::vector<float> sine(double hz, double sampleRate, double seconds) {
+    std::vector<float> x(static_cast<size_t>(seconds * sampleRate));
+    for (size_t i = 0; i < x.size(); ++i)
+        x[i] = static_cast<float>(0.5 * std::sin(2.0 * kPi * hz * static_cast<double>(i) / sampleRate));
+    return x;
+}
+
+void runChorus(Chorus& chorus, std::vector<float>& left, std::vector<float>* right, int block = 256) {
+    for (size_t pos = 0; pos < left.size(); pos += static_cast<size_t>(block)) {
+        const int n = static_cast<int>(std::min<size_t>(static_cast<size_t>(block), left.size() - pos));
+        chorus.process(left.data() + pos, right != nullptr ? right->data() + pos : nullptr, n);
+    }
+}
+} // namespace
+
+TEST_CASE("Chorus off passes the sound through untouched", "[synth][chorus]") {
+    Chorus chorus;
+    chorus.prepare(48000.0);
+    const auto in = sine(440.0, 48000.0, 0.5);
+    auto left = in;
+    std::vector<float> right(in.size(), 0.0f);
+    runChorus(chorus, left, &right);
+    CHECK(left == in);
+    CHECK(right == in);
+}
+
+TEST_CASE("Chorus keeps the average pitch exactly in tune and widens the stereo", "[synth][chorus]") {
+    // 45 kHz makes one LFO cycle (1 / 0.45 Hz) exactly 100000 samples.
+    const double sr = 45000.0;
+    const size_t cycle = 100000;
+    const double hz = 349.2282;  // F4
+    Chorus chorus;
+    chorus.prepare(sr);
+    chorus.setAmount(1.0f);
+    chorus.reset();  // start at full amount
+    auto left = sine(hz, sr, 4.8);
+    std::vector<float> right(left.size(), 0.0f);
+    runChorus(chorus, left, &right);
+
+    // Over a whole LFO cycle the pitch is exact.
+    const double cycleSeconds = static_cast<double>(cycle) / sr;
+    for (const auto* side : {&left, &right}) {
+        const double got = measureHz(*side, sr, hz, static_cast<size_t>(0.2 * sr), cycleSeconds, cycleSeconds);
+        CHECK(std::abs(centsBetween(got, hz)) < 0.01);
+    }
+    // Moment to moment it wobbles only a few cents.
+    for (double t = 0.2; t < 2.4; t += 0.2) {
+        const double got = measureHz(left, sr, hz, static_cast<size_t>(t * sr), 0.05, 0.05);
+        INFO("t = " << t << " s, cents " << centsBetween(got, hz));
+        CHECK(std::abs(centsBetween(got, hz)) < 5.0);
+    }
+    // The two sides differ (that is the width).
+    double diff = 0.0;
+    for (size_t i = cycle / 4; i < cycle; ++i)
+        diff = std::max(diff, static_cast<double>(std::abs(left[i] - right[i])));
+    CHECK(diff > 0.01);
+    CHECK(peak(left) < 0.6);
+}
+
+TEST_CASE("Turning the chorus on is smooth, and mono mixes both sides", "[synth][chorus]") {
+    const double sr = 48000.0;
+    const auto in = sine(440.0, sr, 0.5);
+
+    Chorus chorus;
+    chorus.prepare(sr);
+    auto left = in;
+    std::vector<float> right(in.size(), 0.0f);
+    chorus.process(left.data(), right.data(), 4800);
+    chorus.setAmount(1.0f);  // switched on mid-sound
+    chorus.process(left.data() + 4800, right.data() + 4800, static_cast<int>(in.size()) - 4800);
+    CHECK(maxStep(left) < maxStep(in) * 1.2);
+    CHECK(maxStep(right) < maxStep(in) * 1.2);
+
+    Chorus mono;
+    mono.prepare(sr);
+    auto m = in;
+    mono.process(m.data(), nullptr, 4800);
+    mono.setAmount(1.0f);
+    mono.process(m.data() + 4800, nullptr, static_cast<int>(in.size()) - 4800);
+    for (size_t i = 0; i < in.size(); i += 97)
+        CHECK(m[i] == Approx(0.5 * (left[i] + right[i])).margin(1e-6));
 }

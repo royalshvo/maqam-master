@@ -129,6 +129,7 @@ Maqam parseMaqam(const json& m, const MaqamLibrary& lib) {
     const std::string where = "maqam '" + out.id + "'";
     out.name = requireString(m, "name", where);
     out.nameAr = optionalString(m, "name_ar");
+    out.mood = optionalString(m, "mood");
     out.reviewed = isVerified(m);
 
     const json& rt = require(m, "reference_tonic", where);

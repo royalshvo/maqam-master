@@ -347,6 +347,109 @@
        ]
       }
      ]
+    },
+    {
+     "ajnas": [
+      {
+       "jins": "bayati",
+       "name": "Bayati",
+       "name_ar": "بياتي",
+       "root_degree": 1,
+       "root_name": "D"
+      },
+      {
+       "jins": "hijaz",
+       "name": "Hijaz",
+       "name_ar": "حجاز",
+       "root_degree": 4,
+       "root_name": "G"
+      }
+     ],
+     "id": "shuri",
+     "label": "Shuri (Hijaz on the 4th)",
+     "notes": [
+      {
+       "cents": 0.0,
+       "degree": 1,
+       "hz": 293.6647679174076,
+       "name": "D",
+       "name_words": "D",
+       "roles": [
+        "tonic"
+       ]
+      },
+      {
+       "cents": 150.0,
+       "degree": 2,
+       "hz": 320.24370022528126,
+       "name": "E½♭",
+       "name_words": "E half-flat",
+       "roles": [
+        "characteristic",
+        "quarter_tone"
+       ]
+      },
+      {
+       "cents": 300.0,
+       "degree": 3,
+       "hz": 349.2282314330039,
+       "name": "F",
+       "name_words": "F",
+       "roles": [
+        "passing"
+       ]
+      },
+      {
+       "cents": 500.0,
+       "degree": 4,
+       "hz": 391.99543598174927,
+       "name": "G",
+       "name_words": "G",
+       "roles": [
+        "ghammaz"
+       ]
+      },
+      {
+       "cents": 600.0,
+       "degree": 5,
+       "hz": 415.3046975799451,
+       "name": "A♭",
+       "name_words": "A flat",
+       "roles": [
+        "passing"
+       ]
+      },
+      {
+       "cents": 900.0,
+       "degree": 6,
+       "hz": 493.8833012561241,
+       "name": "B",
+       "name_words": "B",
+       "roles": [
+        "passing"
+       ]
+      },
+      {
+       "cents": 1000.0,
+       "degree": 7,
+       "hz": 523.2511306011972,
+       "name": "C",
+       "name_words": "C",
+       "roles": [
+        "passing"
+       ]
+      },
+      {
+       "cents": 1200.0,
+       "degree": 8,
+       "hz": 587.3295358348151,
+       "name": "D",
+       "name_words": "D",
+       "roles": [
+        "tonic"
+       ]
+      }
+     ]
     }
    ],
    "ghammaz": {

@@ -88,6 +88,8 @@ TEST_CASE("structure of specific maqamat") {
     const Maqam* hijaz = lib.findMaqam("hijaz");
     REQUIRE(hijaz != nullptr);
     CHECK(hijaz->findVariant("rast_upper") != nullptr);
+    for (const auto& m : lib.maqamat)
+        CHECK_FALSE(m.mood.empty());  // every maqam has its plain-words description
 }
 
 TEST_CASE("minimal file parses") {

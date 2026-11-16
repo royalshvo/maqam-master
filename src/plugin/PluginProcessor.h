@@ -7,10 +7,12 @@
 
 #include <array>
 #include <string>
+#include <vector>
 
 #include "core/KeyMapping.h"
 #include "core/MaqamData.h"
 #include "core/Tuning.h"
+#include "synth/Chorus.h"
 #include "synth/Drone.h"
 #include "synth/KeyTuning.h"
 #include "synth/Synth.h"
@@ -48,16 +50,20 @@ public:
     const maqam::MaqamLibrary& library() const { return library_; }
     const juce::String& loadError() const { return loadError_; }
     const std::string& selectedMaqamId() const { return selectedMaqamId_; }
+    /** The chosen ascending variant of the maqam (e.g. Bayati's "shuri"); empty = main form. */
+    const std::string& selectedVariantId() const { return selectedVariantId_; }
     const maqam::Tonic& tonic() const { return tonic_; }
 
     /** Changing maqam or tonic retunes the synth at once, including held notes, and sends a
         change message. */
     void setMaqam(const std::string& id);
+    void setVariant(const std::string& variantId);
     void setTonic(const maqam::Tonic& tonic);
 
     struct KeyInfo {
         int degree = 0;          // 1-based maqam degree, 0 outside the maqam
         bool descending = false; // the key holds a descending-form note
+        int centsOff = 0;        // how far the note is from the normal (12-TET) key, e.g. -50
         juce::String name;       // note name on that key
     };
     /** What each MIDI key plays under the current maqam, for the on-screen keyboard. */
@@ -76,6 +82,7 @@ private:
     maqam::MaqamLibrary library_;
     juce::String loadError_;
     std::string selectedMaqamId_ = "hijaz";
+    std::string selectedVariantId_;
     maqam::Tonic tonic_;   // default F4
     std::array<KeyInfo, maqam::synth::kNumKeys> keyInfo_;
     juce::CriticalSection retuneLock_;  // retune() can be called from the host's state thread too
@@ -83,6 +90,8 @@ private:
     // Audio thread
     maqam::synth::Synth synth_;
     maqam::synth::Drone drone_;
+    maqam::synth::Chorus chorus_;
+    std::vector<float> droneBuffer_;  // the drone renders here, then joins both sides
     maqam::synth::TuningExchange tuningExchange_;
     juce::Reverb reverb_;
     std::atomic<float>* soundParam_ = nullptr;
@@ -90,6 +99,7 @@ private:
     std::atomic<float>* decayParam_ = nullptr;
     std::atomic<float>* volumeParam_ = nullptr;
     std::atomic<float>* reverbParam_ = nullptr;
+    std::atomic<float>* chorusParam_ = nullptr;
     std::atomic<float>* limitParam_ = nullptr;
     std::atomic<float>* modeParam_ = nullptr;
     std::atomic<float>* glideParam_ = nullptr;
@@ -99,6 +109,7 @@ private:
     std::atomic<float>* glideNoteParam_ = nullptr;
     std::atomic<float>* vibratoSyncParam_ = nullptr;
     std::atomic<float>* vibratoNoteParam_ = nullptr;
+    std::atomic<float>* bendRangeParam_ = nullptr;
     std::atomic<float>* octaveParam_ = nullptr;
     std::atomic<float>* transposeParam_ = nullptr;
     std::atomic<float>* droneOnParam_ = nullptr;

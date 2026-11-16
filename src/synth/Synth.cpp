@@ -13,6 +13,20 @@ constexpr float kSilence = 3.0e-5f;
 constexpr int kPluckChunk = 32;           // the pluck loop is retuned at most this often (samples)
 constexpr double kVibratoDelay = 0.15;    // seconds of straight tone before vibrato starts
 constexpr double kVibratoFadeIn = 0.35;   // seconds for vibrato to reach full depth
+constexpr double kBendSmoothSeconds = 0.005;  // time constant easing the pitch wheel
+// Synth unison: two extra saws this fraction above and below the note (about 4 cents). They sit
+// symmetrically (in Hz) and start at mirrored phases, so together they only swell and fade the
+// centre saw: the pitch stays exactly on the note.
+constexpr double kUnisonSpread = 0.0023;
+constexpr float kUnisonLevel = 0.16f;
+constexpr float kSubLevel = 0.3f;         // Synth: sine one octave below
+constexpr double kNeyVibratoPitch = 0.35;  // share of the vibrato depth the Ney puts into pitch
+constexpr float kClipKnee = 0.7f;         // output is untouched below this level
+
+// The oud-like body the Pluck sound plays through: fixed resonances (Hz, 1/Q, gain) mixed in
+// beside the direct string sound.
+struct BodyMode { double hz; float k; float gain; };
+constexpr BodyMode kBodyModes[] = {{105.0, 0.22f, 0.55f}, {195.0, 0.2f, 0.5f}, {310.0, 0.25f, 0.4f}, {520.0, 0.3f, 0.3f}};
 
 // Phase delay (in samples) at w radians/sample of the two-point loop filter (1-s) + s z^-1.
 double twoPointDelay(double s, double w) {
@@ -24,6 +38,16 @@ double allpassDelay(double a, double w) {
     const double num = std::atan2(-std::sin(w), a + std::cos(w));
     const double den = std::atan2(-a * std::sin(w), 1.0 + a * std::cos(w));
     return -(num - den) / w;
+}
+
+// Levels pass unchanged up to the knee, then round off smoothly towards 1: single notes stay
+// clean and big chords are held in without hard clipping.
+float softClip(float x) {
+    const float a = std::abs(x);
+    if (a <= kClipKnee)
+        return x;
+    const float over = (a - kClipKnee) / (1.0f - kClipKnee);
+    return std::copysign(kClipKnee + (1.0f - kClipKnee) * std::tanh(over), x);
 }
 
 float polyBlep(double t, double dt) {
@@ -68,13 +92,23 @@ void Voice::start(int key, double hz, float velocity, const SynthParams& params,
     glideStep_ = 0.0;
     vibPhase_ = 0.0;
     elapsed_ = 0.0;
+    bendTarget_ = bendNow_ = 0.0;
     noise_ = 0x9E3779B9u ^ static_cast<uint32_t>(age * 2654435761u + static_cast<uint64_t>(key));
     const float bright = std::clamp(params.brightness, 0.0f, 1.0f);
     const double decay = std::max(0.05, static_cast<double>(params.decaySeconds));
 
     switch (params.sound) {
     case SoundType::Pluck: {
-        lpCoef_ = 0.5f - 0.42f * bright;
+        // String damping. The loop filter acts once per period, so left alone it would damp a
+        // high note's harmonics much faster than a low note's (dull trebles, buzzy basses) and
+        // change with the sample rate. Scale it so the harmonics die at a similar rate across
+        // the keyboard, as on a real instrument; brightness sets that rate.
+        {
+            const double s0 = 0.5 - 0.42 * bright;
+            const double rate = sampleRate_ / 48000.0;
+            const double loss = std::min(0.25, s0 * (1.0 - s0) * (350.0 / std::max(hz, kMinPluckHz)) * rate * rate);
+            lpCoef_ = static_cast<float>(0.5 - std::sqrt(0.25 - loss));
+        }
         tunePluck(hz);
 
         // Excitation: one period of filtered noise, with a pluck-position comb for a string-like
@@ -107,6 +141,9 @@ void Voice::start(int key, double hz, float velocity, const SynthParams& params,
     }
     case SoundType::Synth:
         phase_ = 0.0;
+        phaseUp_ = 0.37;    // mirrored start phases: see kUnisonSpread
+        phaseDown_ = 0.63;
+        subPhase_ = 0.0;
         amp_ = 0.0f;
         attacking_ = true;
         attackStep_ = static_cast<float>(1.0 / (0.004 * sampleRate_));
@@ -118,12 +155,19 @@ void Voice::start(int key, double hz, float velocity, const SynthParams& params,
         break;
     case SoundType::Ney:
         phase_ = 0.0;
+        flutter_ = 0.0f;
         amp_ = 0.0f;
-        attackCoef_ = static_cast<float>(std::exp(-1.0 / (0.045 * sampleRate_)));  // breath swell
+        attackCoef_ = static_cast<float>(std::exp(-1.0 / (0.035 * sampleRate_)));  // breath swell
         releaseCoef_ = static_cast<float>(std::exp(-1.0 / ((0.04 + 0.012 * decay) * sampleRate_)));
-        chiff_ = 0.6f + 0.4f * velocity;
-        chiffCoef_ = static_cast<float>(std::exp(-1.0 / (0.035 * sampleRate_)));
-        ic1_ = ic2_ = 0.0f;
+        chiff_ = 0.5f + 0.5f * velocity;
+        chiffCoef_ = static_cast<float>(std::exp(-1.0 / (0.03 * sampleRate_)));
+        // The note is blown up to pitch: it starts a little flat and settles within ~0.1 s.
+        scoopCents_ = -12.0;
+        scoopCoef_ = std::exp(-1.0 / (0.02 * sampleRate_));
+        std::fill(line_.begin(), line_.end(), 0.0f);  // the bore the breath noise rings in
+        write_ = 0;
+        boreLp_ = hissLp_ = 0.0f;
+        wander_.fill(0.0f);
         break;
     }
 }
@@ -162,9 +206,19 @@ double Voice::advancePitch(int samples) {
         const double fade = std::clamp((elapsed_ - kVibratoDelay) / kVibratoFadeIn, 0.0, 1.0);
         vib = vibDepthCents_ * fade * std::sin(2.0 * kPi * vibPhase_);
     }
+    lastVib_ = vib;
+    // A ney's vibrato is mostly breath (loudness and tone, see renderNey), with only a little
+    // pitch: a wide pitch vibrato is what a violin does.
+    if (params_.sound == SoundType::Ney)
+        vib *= kNeyVibratoPitch;
     vibPhase_ += vibRateHz_ * dt;
     vibPhase_ -= std::floor(vibPhase_);
-    return glideCents_ + vib;
+    if (bendNow_ != bendTarget_) {
+        bendNow_ = bendTarget_ + (bendNow_ - bendTarget_) * std::exp(-dt / kBendSmoothSeconds);
+        if (std::abs(bendNow_ - bendTarget_) < 1e-4)
+            bendNow_ = bendTarget_;
+    }
+    return glideCents_ + vib + bendNow_;
 }
 
 void Voice::tunePluck(double hz) {
@@ -208,7 +262,7 @@ void Voice::render(float* out, int numSamples) {
 
 void Voice::renderPluck(float* out, int numSamples) {
     const int len = static_cast<int>(line_.size());
-    const float outGain = 0.5f * velocity_;
+    const float outGain = 1.1f * velocity_;
     for (int done = 0; done < numSamples;) {
         float peak = 0.0f;
         const int chunk = std::min(kPluckChunk, numSamples - done);
@@ -243,23 +297,41 @@ void Voice::renderPluck(float* out, int numSamples) {
 
 void Voice::renderSynth(float* out, int numSamples) {
     const float bright = std::clamp(params_.brightness, 0.0f, 1.0f);
-    const float outGain = 0.7f * velocity_;  // matches the other sounds' loudness
+    const float outGain = 0.62f * velocity_;  // matches the other sounds' loudness
+    auto sawAt = [](double phase, double dt) { return static_cast<float>(2.0 * phase - 1.0) - polyBlep(phase, dt); };
+    auto wrap = [](double& phase) {
+        if (phase >= 1.0)
+            phase -= 1.0;
+    };
     const double nyquistGuard = 0.45 * sampleRate_;
     const float k = 1.2f;  // 1/Q: a gentle resonance
     for (int i = 0; i < numSamples; ++i) {
         const double hz = baseHz_ * std::exp2(advancePitch(1) / 1200.0);
         const double dt = hz / sampleRate_;
-        const float saw = static_cast<float>(2.0 * phase_ - 1.0) - polyBlep(phase_, dt);
+        const float saw = sawAt(phase_, dt);
+        const double dtUp = dt * (1.0 + kUnisonSpread), dtDown = dt * (1.0 - kUnisonSpread);
+        const float sides = sawAt(phaseUp_, dtUp) + sawAt(phaseDown_, dtDown);
+        const float sub = static_cast<float>(std::sin(2.0 * kPi * subPhase_));
         double half = phase_ + 0.5;
         if (half >= 1.0)
             half -= 1.0;
         const float square = (phase_ < 0.5 ? 1.0f : -1.0f) + polyBlep(phase_, dt) - polyBlep(half, dt);
-        const float osc = 0.6f * saw + 0.4f * square;
+        // The square is subtracted: a rising saw and this square have opposite fundamentals, so
+        // this way they reinforce each other instead of thinning the note out.
+        const float osc = 0.5f * saw + kUnisonLevel * sides - 0.3f * square - kSubLevel * sub;
         phase_ += dt;
-        if (phase_ >= 1.0)
-            phase_ -= 1.0;
+        wrap(phase_);
+        phaseUp_ += dtUp;
+        wrap(phaseUp_);
+        phaseDown_ += dtDown;
+        wrap(phaseDown_);
+        subPhase_ += 0.5 * dt;
+        wrap(subPhase_);
 
-        const double cutoff = std::min(nyquistGuard, hz * (1.5 + (2.0 + 30.0 * bright) * filterEnv_));
+        // The filter opens on the attack and settles a few harmonics above the note, so the
+        // held sound keeps its body.
+        const double cutoff =
+            std::min(nyquistGuard, hz * (2.5 + 5.0 * bright + (2.0 + 30.0 * bright) * filterEnv_));
         filterEnv_ *= filterCoef_;
         const float g = static_cast<float>(std::tan(kPi * cutoff / sampleRate_));
         const float a1 = 1.0f / (1.0f + g * (g + k));
@@ -289,39 +361,85 @@ void Voice::renderSynth(float* out, int numSamples) {
 }
 
 void Voice::renderNey(float* out, int numSamples) {
+    // A reed flute, built from three things that move together with the player's breath:
+    //  - the tone: harmonics that each wander a little, and come in from the bottom up as the
+    //    breath builds (a soft breath is nearly a sine, a full one is rich);
+    //  - the breath in the tube: noise ringing in a delay line one period long, so the air
+    //    itself carries the note's pitch, pulsing with the tone;
+    //  - the air at the lips: a quiet hiss.
+    // Vibrato also moves the loudness and brightness, as breath vibrato does.
+    // A flute is mostly fundamental: strong upper harmonics are what make a bowed string. So
+    // the harmonics fall away quickly and the breath does the rest.
+    static constexpr float kPartials[kNeyPartials] = {1.0f, 0.3f, 0.12f, 0.05f, 0.022f, 0.01f};
     const float bright = std::clamp(params_.brightness, 0.0f, 1.0f);
-    // A soft, mostly fundamental tone; brightness adds upper harmonics and breath.
-    const float h2 = 0.10f + 0.25f * bright;
-    const float h3 = 0.04f + 0.14f * bright;
-    const float toneNorm = 1.0f / (1.0f + h2 + h3);
-    const float breath = 0.9f + 1.6f * bright;
-    const float outGain = 0.3f * velocity_;
+    const float tilt = 0.7f + 0.6f * bright;  // extra roll-off (or lift) per harmonic
+    const float outGain = 0.6f * velocity_;
     const double nyquistGuard = 0.45 * sampleRate_;
-    const float k = 0.7f;  // breath band-pass, Q about 1.4
+    const int len = static_cast<int>(line_.size());
+    const float flutterCoef = static_cast<float>(1.0 - std::exp(-2.0 * kPi * 6.0 / sampleRate_));
+    const float wanderCoef = static_cast<float>(1.0 - std::exp(-2.0 * kPi * 3.0 / sampleRate_));
+    // Scales white noise so each harmonic's level wanders by about 5%.
+    const float wanderIn = 0.05f / (0.577f * std::sqrt(0.5f * wanderCoef));
+    const float hissCoef = static_cast<float>(1.0 - std::exp(-2.0 * kPi * 2500.0 / sampleRate_));
+    constexpr float kBoreDamp = 0.3f;        // one-pole low-pass in the bore loop
+    constexpr float kBoreFeedback = 0.9f;
+    const float boreGain = 0.11f * (0.7f + 0.9f * bright);
+    const float hissGain = 0.06f * (0.5f + bright);
+
     for (int i = 0; i < numSamples; ++i) {
-        const double hz = baseHz_ * std::exp2(advancePitch(1) / 1200.0);
+        const double hz = baseHz_ * std::exp2((advancePitch(1) + scoopCents_) / 1200.0);
+        scoopCents_ *= scoopCoef_;
         const double theta = 2.0 * kPi * phase_;
-        const float tone = static_cast<float>(std::sin(theta) + h2 * std::sin(2.0 * theta) + h3 * std::sin(3.0 * theta)) * toneNorm;
         phase_ += hz / sampleRate_;
         if (phase_ >= 1.0)
             phase_ -= 1.0;
 
-        // Breath: white noise band-passed around the second harmonic, where a ney's air sits.
-        const float g = static_cast<float>(std::tan(kPi * std::min(nyquistGuard, 2.0 * hz) / sampleRate_));
-        const float a1 = 1.0f / (1.0f + g * (g + k));
-        const float a2 = g * a1;
-        const float a3 = g * a2;
+        // Breath pressure: swell, flutter, and the vibrato's push.
         const float w = white();
-        const float v3 = w - ic2_;
-        const float v1 = a1 * ic1_ + a2 * v3;
-        const float v2 = ic2_ + a2 * ic1_ + a3 * v3;
-        ic1_ = 2.0f * v1 - ic1_;
-        ic2_ = 2.0f * v2 - ic2_;
-        const float chiff = white() * chiff_;
-        chiff_ *= chiffCoef_;
-
+        flutter_ += flutterCoef * (w - flutter_);
         amp_ = released_ ? amp_ * releaseCoef_ : 1.0f + (amp_ - 1.0f) * attackCoef_;
-        out[i] += (0.8f * tone + breath * 0.12f * v1 + 0.12f * chiff) * amp_ * outGain;
+        const float vib = static_cast<float>(lastVib_ / kMaxVibratoCents);  // -1..1
+        const float pressure = std::max(0.0f, amp_ * (1.0f + 1.5f * flutter_) * (1.0f + 0.3f * vib));
+
+        // Tone.
+        const float grow = std::sqrt(std::min(1.0f, pressure));  // upper harmonics need more breath
+        float tone = 0.0f, level = 1.0f;
+        for (int n = 0; n < kNeyPartials; ++n) {
+            if ((n + 1) * hz > nyquistGuard)
+                break;
+            float& wander = wander_[static_cast<size_t>(n)];
+            wander += wanderCoef * (white() * wanderIn - wander);
+            tone += kPartials[n] * level * (1.0f + wander) * static_cast<float>(std::sin((n + 1) * theta));
+            level *= tilt * grow;
+        }
+        // The attack briefly cracks into the octave before the note settles.
+        tone += 0.5f * chiff_ * static_cast<float>(std::sin(2.0 * theta));
+
+        // Breath in the tube: noise (pulsing with the tone, plus the attack's chiff) rings in a
+        // delay one period long.
+        const float breathIn = w * (1.0f + 0.5f * static_cast<float>(std::sin(theta))) + white() * chiff_ * 2.0f;
+        chiff_ *= chiffCoef_;
+        const double delay = std::clamp(sampleRate_ / hz - kBoreDamp / (1.0 - kBoreDamp), 2.0, static_cast<double>(len - 3));
+        double readPos = static_cast<double>(write_) - delay;
+        if (readPos < 0.0)
+            readPos += len;
+        const int r0 = static_cast<int>(readPos);
+        const int r1 = r0 + 1 == len ? 0 : r0 + 1;
+        const float frac = static_cast<float>(readPos - r0);
+        const float delayed = line_[static_cast<size_t>(r0)] + frac * (line_[static_cast<size_t>(r1)] - line_[static_cast<size_t>(r0)]);
+        boreLp_ += (1.0f - kBoreDamp) * (delayed - boreLp_);
+        const float bore = breathIn + kBoreFeedback * boreLp_;
+        line_[static_cast<size_t>(write_)] = bore;
+        if (++write_ == len)
+            write_ = 0;
+
+        // Air at the lips.
+        hissLp_ += hissCoef * (w - hissLp_);
+        const float hiss = w - hissLp_;
+
+        // The tone needs pressure to speak (so the breath is heard first); the air follows it
+        // directly.
+        out[i] += (0.62f * tone * std::min(1.0f, pressure) + boreGain * bore + hissGain * hiss) * pressure * outGain;
     }
     if (released_ && amp_ < 1.0e-4f)
         active_ = false;
@@ -336,6 +454,11 @@ void Synth::prepare(double sampleRate) {
     for (auto& v : voices_)
         v.prepare(sampleRate);
     heldCount_ = 0;
+    for (size_t m = 0; m < body_.size(); ++m) {
+        const double hz = std::min(kBodyModes[m].hz, 0.4 * sampleRate);
+        body_[m] = BodyFilter{};
+        body_[m].g = static_cast<float>(std::tan(kPi * hz / sampleRate));
+    }
 }
 
 void Synth::setParams(const SynthParams& params) {
@@ -348,6 +471,31 @@ void Synth::setParams(const SynthParams& params) {
 
 void Synth::setModWheel(float value) {
     modWheel_ = std::clamp(value, 0.0f, 1.0f);
+}
+
+void Synth::setPitchBend(float value) {
+    pitchBend_ = std::clamp(value, -1.0f, 1.0f);
+}
+
+double Synth::bendCentsFor(const Voice& v) const {
+    const double amount = pitchBend_;
+    if (amount == 0.0)
+        return 0.0;
+    const double fixed = amount * params_.bendRangeCents;
+    const int sk = soundingKey(v.key(), v.shift());
+    if (!params_.bendToMaqam || !tuning_->hasMaqam || sk < 0)
+        return fixed;
+    // Full travel reaches the nearest maqam degree above (or below) the note's pitch.
+    const int dir = amount > 0.0 ? 1 : -1;
+    const double from = hzOf(sk);
+    for (int k = sk + dir; k >= 0 && k < kNumKeys; k += dir) {
+        if (tuning_->degree[static_cast<size_t>(k)] == 0)
+            continue;
+        const double cents = 1200.0 * std::log2(hzOf(k) / from);
+        if (cents * dir > 1.0)
+            return std::abs(amount) * cents;
+    }
+    return fixed;  // no degree that way within the keyboard
 }
 
 int Synth::soundingKey(int incoming, int shift) const {
@@ -414,6 +562,7 @@ void Synth::polyNoteOn(int key, float velocity) {
     Voice* v = findVoiceFor(key);
     v->start(key, hzOf(sk), velocity, params_, ++noteCounter_);
     v->setShift(keyShift_);
+    v->setBend(bendCentsFor(*v), true);  // a note played with the wheel held starts bent
 }
 
 void Synth::removeHeld(int key) {
@@ -444,6 +593,7 @@ void Synth::monoNoteOn(int key, float velocity) {
     const double previousHz = v.active() ? v.currentHz() : 0.0;
     v.start(key, hzOf(sk), velocity, params_, ++noteCounter_);
     v.setShift(keyShift_);
+    v.setBend(bendCentsFor(v), true);
     if (params_.mode == VoiceMode::Mono && previousHz > 0.0 && glide > 0.0)
         v.glideFrom(previousHz, glide);
 }
@@ -519,12 +669,43 @@ void Synth::render(float* out, int numSamples) {
     std::fill(out, out + numSamples, 0.0f);
     const double depth = std::clamp(static_cast<double>(params_.vibrato) + modWheel_, 0.0, 1.0) * kMaxVibratoCents;
     for (auto& v : voices_) {
+        if (!v.active())
+            continue;
         v.setVibrato(depth, params_.vibratoRateHz);
+        v.setBend(bendCentsFor(v), false);
         v.render(out, numSamples);
+    }
+    bool bodyRinging = activeVoiceCount() > 0;
+    for (auto& f : body_)
+        bodyRinging = bodyRinging || std::abs(f.ic1) > 1.0e-6f || std::abs(f.ic2) > 1.0e-6f;
+    if (!bodyRinging) {
+        for (auto& f : body_)
+            f.ic1 = f.ic2 = 0.0f;  // fully died away: back to true silence
+    } else if (params_.sound == SoundType::Pluck) {
+        // The instrument's body: band-pass resonances, all fed by the strings, beside the
+        // direct sound.
+        for (int i = 0; i < numSamples; ++i) {
+            const float dry = out[i];
+            float sum = dry;
+            for (size_t m = 0; m < body_.size(); ++m) {
+                BodyFilter& f = body_[m];
+                const float k = kBodyModes[m].k;
+                const float a1 = 1.0f / (1.0f + f.g * (f.g + k));
+                const float a2 = f.g * a1;
+                const float a3 = f.g * a2;
+                const float v3 = dry - f.ic2;
+                const float v1 = a1 * f.ic1 + a2 * v3;
+                const float v2 = f.ic2 + a2 * f.ic1 + a3 * v3;
+                f.ic1 = 2.0f * v1 - f.ic1;
+                f.ic2 = 2.0f * v2 - f.ic2;
+                sum += kBodyModes[m].gain * k * v1;  // k scales the band-pass peak to unity
+            }
+            out[i] = sum;
+        }
     }
     const float gain = params_.gain;
     for (int i = 0; i < numSamples; ++i)
-        out[i] *= gain;
+        out[i] = softClip(out[i]) * gain;
 }
 
 int Synth::activeVoiceCount() const {
@@ -532,6 +713,13 @@ int Synth::activeVoiceCount() const {
     for (const auto& v : voices_)
         n += v.active() ? 1 : 0;
     return n;
+}
+
+double Synth::bendCents(int key) const {
+    for (const auto& v : voices_)
+        if (v.active() && v.key() == key)
+            return v.bendCents();
+    return 0.0;
 }
 
 double Synth::playingHz(int key) const {

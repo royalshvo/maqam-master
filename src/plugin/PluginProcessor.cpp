@@ -33,6 +33,8 @@ juce::AudioProcessorValueTreeState::ParameterLayout MaqamProcessor::createLayout
     layout.add(std::make_unique<AudioParameterFloat>(ParameterID{"volume", 1}, "Volume",
                                                      NormalisableRange<float>(-36.0f, 6.0f), -6.0f,
                                                      AudioParameterFloatAttributes().withLabel("dB")));
+    layout.add(std::make_unique<AudioParameterFloat>(ParameterID{"chorus", 1}, "Chorus",
+                                                     NormalisableRange<float>(0.0f, 1.0f), 0.0f));
     layout.add(std::make_unique<AudioParameterFloat>(ParameterID{"reverb", 1}, "Reverb",
                                                      NormalisableRange<float>(0.0f, 1.0f), 0.2f));
     layout.add(std::make_unique<AudioParameterChoice>(ParameterID{"limit", 1}, "Note limit",
@@ -54,6 +56,11 @@ juce::AudioProcessorValueTreeState::ParameterLayout MaqamProcessor::createLayout
     layout.add(std::make_unique<AudioParameterBool>(ParameterID{"vibratoSync", 1}, "Vibrato sync", false));
     layout.add(std::make_unique<AudioParameterChoice>(ParameterID{"vibratoNote", 1}, "Vibrato note",
                                                       noteValueNames(), maqam::synth::noteValueIndex("1/8T")));
+    layout.add(std::make_unique<AudioParameterChoice>(
+        ParameterID{"bendRange", 1}, "Pitch bend",
+        StringArray{String::fromUTF8("\xc2\xb1" "50 cents"), String::fromUTF8("\xc2\xb1" "100 cents"),
+                    String::fromUTF8("\xc2\xb1" "200 cents"), "Next maqam note"},
+        2));
     layout.add(std::make_unique<AudioParameterInt>(ParameterID{"octave", 1}, "Octave", -2, 2, 0));
     layout.add(std::make_unique<AudioParameterInt>(ParameterID{"transpose", 1}, "Transpose", -12, 12, 0,
                                                    AudioParameterIntAttributes().withLabel("st")));
@@ -73,6 +80,7 @@ MaqamProcessor::MaqamProcessor()
     decayParam_ = parameters.getRawParameterValue("decay");
     volumeParam_ = parameters.getRawParameterValue("volume");
     reverbParam_ = parameters.getRawParameterValue("reverb");
+    chorusParam_ = parameters.getRawParameterValue("chorus");
     limitParam_ = parameters.getRawParameterValue("limit");
     modeParam_ = parameters.getRawParameterValue("voiceMode");
     glideParam_ = parameters.getRawParameterValue("glide");
@@ -82,6 +90,7 @@ MaqamProcessor::MaqamProcessor()
     glideNoteParam_ = parameters.getRawParameterValue("glideNote");
     vibratoSyncParam_ = parameters.getRawParameterValue("vibratoSync");
     vibratoNoteParam_ = parameters.getRawParameterValue("vibratoNote");
+    bendRangeParam_ = parameters.getRawParameterValue("bendRange");
     octaveParam_ = parameters.getRawParameterValue("octave");
     transposeParam_ = parameters.getRawParameterValue("transpose");
     droneOnParam_ = parameters.getRawParameterValue("droneOn");
@@ -101,7 +110,17 @@ MaqamProcessor::MaqamProcessor()
 void MaqamProcessor::setMaqam(const std::string& id) {
     if (library_.findMaqam(id) == nullptr)
         return;
+    if (id != selectedMaqamId_)
+        selectedVariantId_.clear();  // variants belong to one maqam
     selectedMaqamId_ = id;
+    retune();
+}
+
+void MaqamProcessor::setVariant(const std::string& variantId) {
+    const maqam::Maqam* m = library_.findMaqam(selectedMaqamId_);
+    if (m == nullptr || (!variantId.empty() && m->findVariant(variantId) == nullptr))
+        return;
+    selectedVariantId_ = variantId;
     retune();
 }
 
@@ -120,10 +139,10 @@ void MaqamProcessor::retune() {
             try {
                 // Ascending notes plus the descending form's notes on free keys (12-key layout).
                 // Keys outside the maqam play 12-TET.
-                const maqam::TuningTable table = maqam::makeTwelveKeyTable(*m, tonic_);
+                const maqam::TuningTable table = maqam::makeTwelveKeyTable(*m, tonic_, maqam::kDefaultA4Hz, selectedVariantId_);
                 tuning = maqam::synth::makeKeyTuning(table);
 
-                const auto up = maqam::resolveScale(*m, maqam::Direction::Ascending);
+                const auto up = maqam::resolveScale(*m, maqam::Direction::Ascending, selectedVariantId_);
                 const auto down = maqam::resolveScale(*m, maqam::Direction::Descending);
                 const auto names = maqam::stepNoteNames(table, *up, down ? &*down : nullptr, tonic_);
                 const int steps = table.stepsPerPeriod();
@@ -132,6 +151,8 @@ void MaqamProcessor::retune() {
                     auto& ki = info[static_cast<size_t>(k)];
                     ki.degree = tuning.degree[static_cast<size_t>(k)];
                     ki.descending = table.alternateOfStep[static_cast<size_t>(step)];
+                    if (ki.degree != 0)
+                        ki.centsOff = juce::roundToInt(1200.0 * std::log2(tuning.hz[static_cast<size_t>(k)] / maqam::midiNoteToHz(k)));
                     ki.name = juce::String::fromUTF8(names[static_cast<size_t>(step)].c_str());
                 }
             } catch (const std::exception&) {
@@ -148,8 +169,10 @@ int MaqamProcessor::keyShift() const {
     return 12 * juce::roundToInt(octaveParam_->load()) + juce::roundToInt(transposeParam_->load());
 }
 
-void MaqamProcessor::prepareToPlay(double sampleRate, int) {
+void MaqamProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
     synth_.prepare(sampleRate);
+    chorus_.prepare(sampleRate);
+    droneBuffer_.assign(static_cast<size_t>(juce::jmax(512, samplesPerBlock)), 0.0f);
     drone_.prepare(sampleRate);
     drone_.setTonicHz(tuningExchange_.current().tonicHz, 0.0);
     reverb_.setSampleRate(sampleRate);
@@ -175,7 +198,10 @@ void MaqamProcessor::handleMidi(const juce::MidiMessage& m) {
         synth_.killAll();
     else if (m.isAllNotesOff())
         synth_.allNotesOff();
-    else if (m.isControllerOfType(1))  // mod wheel: vibrato depth
+    else if (m.isPitchWheel()) {  // 0..16383, centre 8192
+        const int v = m.getPitchWheelValue() - 8192;
+        synth_.setPitchBend(static_cast<float>(v) / (v > 0 ? 8191.0f : 8192.0f));
+    } else if (m.isControllerOfType(1))  // mod wheel: vibrato depth
         synth_.setModWheel(static_cast<float>(m.getControllerValue()) / 127.0f);
 }
 
@@ -202,6 +228,12 @@ void MaqamProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBu
     p.limit = static_cast<NoteLimit>(juce::jlimit(0, 2, choice(limitParam_)));
     p.mode = static_cast<VoiceMode>(juce::jlimit(0, 2, choice(modeParam_)));
     p.vibrato = vibratoParam_->load();
+    {
+        static constexpr float kBendRanges[] = {50.0f, 100.0f, 200.0f};
+        const int bend = juce::jlimit(0, 3, choice(bendRangeParam_));
+        p.bendToMaqam = bend == 3;
+        p.bendRangeCents = kBendRanges[juce::jmin(bend, 2)];  // also the fallback without a maqam
+    }
 
     // Tempo sync follows the host's tempo (120 BPM when there is none, e.g. standalone).
     double bpm = kDefaultBpm;
@@ -237,13 +269,25 @@ void MaqamProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBu
     }
     if (numSamples > pos)
         synth_.render(out + pos, numSamples - pos);
-    drone_.render(out, numSamples);
+
+    // Chorus spreads the voices to stereo; the drone joins afterwards, dry and centred.
+    const int channels = buffer.getNumChannels();
+    float* right = channels > 1 ? buffer.getWritePointer(1) : nullptr;
+    chorus_.setAmount(chorusParam_->load());
+    chorus_.process(out, right, numSamples);
+    if (drone_.sounding() && !droneBuffer_.empty()) {
+        const int chunkMax = static_cast<int>(droneBuffer_.size());
+        for (int start = 0; start < numSamples; start += chunkMax) {
+            const int n = juce::jmin(chunkMax, numSamples - start);
+            std::fill(droneBuffer_.begin(), droneBuffer_.begin() + n, 0.0f);
+            drone_.render(droneBuffer_.data(), n);
+            juce::FloatVectorOperations::add(out + start, droneBuffer_.data(), n);
+            if (right != nullptr)
+                juce::FloatVectorOperations::add(right + start, droneBuffer_.data(), n);
+        }
+    }
 
     const float amount = reverbParam_->load();
-    const int channels = buffer.getNumChannels();
-    if (channels > 1)
-        for (int c = 1; c < channels; ++c)
-            buffer.copyFrom(c, 0, buffer, 0, 0, numSamples);
     if (amount > 0.001f) {
         juce::Reverb::Parameters rp;
         rp.roomSize = 0.55f;
@@ -266,6 +310,7 @@ juce::AudioProcessorEditor* MaqamProcessor::createEditor() {
 void MaqamProcessor::getStateInformation(juce::MemoryBlock& destData) {
     auto state = parameters.copyState();
     state.setProperty("maqam", juce::String(selectedMaqamId_), nullptr);
+    state.setProperty("variant", juce::String(selectedVariantId_), nullptr);
     state.setProperty("tonicMidi", tonic_.midiNote, nullptr);
     state.setProperty("tonicCents", tonic_.centsOffset, nullptr);
     if (auto xml = state.createXml())
@@ -281,6 +326,10 @@ void MaqamProcessor::setStateInformation(const void* data, int sizeInBytes) {
     const std::string id = state.getProperty("maqam", juce::String(selectedMaqamId_)).toString().toStdString();
     if (library_.findMaqam(id) != nullptr)
         selectedMaqamId_ = id;
+    selectedVariantId_.clear();
+    const std::string variant = state.getProperty("variant", juce::String()).toString().toStdString();
+    if (const auto* m = library_.findMaqam(selectedMaqamId_); m != nullptr && m->findVariant(variant) != nullptr)
+        selectedVariantId_ = variant;
     tonic_.midiNote = juce::jlimit(0, 127, static_cast<int>(state.getProperty("tonicMidi", tonic_.midiNote)));
     tonic_.centsOffset = static_cast<double>(state.getProperty("tonicCents", tonic_.centsOffset));
     retune();
